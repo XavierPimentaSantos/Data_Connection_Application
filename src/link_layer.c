@@ -74,7 +74,7 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
     // TODO
-
+    //em tramas I, cria o BCC2 com os 1024 bytes D, e depois é que aplica stuffing
     return 0;
 }
 
@@ -102,6 +102,6 @@ int llclose(int showStatistics)
     }
 
     close(fd);
-    
+
     return 1;
 }
