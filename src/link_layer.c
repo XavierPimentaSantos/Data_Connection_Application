@@ -258,15 +258,21 @@ int llread(unsigned char *packet)
                 }
                 break;
             case READ_INFO:
-                if(buf[0]==FLAG) {
-                    state = START;
-                    STOP = TRUE;
-                    index = 0;
-                    //send REJECT message
-                }
-                else if(buf[0]==BCC2_calc) {
+                if(buf[0]==BCC2_calc) {
                     state = STANDBY;
                     standby_byte = buf[0];
+                }
+                else if(buf[0]==FLAG) {
+                    state = START;
+                    index = 0;
+                    if(can_receive_bit==0x00) {
+                        write(fd, REJECT_0, 5);
+                        printf("there was an error in the message; requesting retransmission\n");
+                    }
+                    else {
+                        write(fd, REJECT_1, 5);
+                        printf("there was an error in the message; requesting retransmission\n");
+                    }
                 }
                 else if(buf[0]==ESC_SEQUENCE) {
                     state = got_7d;
@@ -307,14 +313,28 @@ int llread(unsigned char *packet)
                     STOP = TRUE;
                     state = START;
                     index = 0;
+                    if(can_receive_bit==0x00) {
+                        write(fd, REJECT_0, 5);
+                        printf("there was an error in the message; requesting retransmission\n");
+                    }
+                    else {
+                        write(fd, REJECT_1, 5);
+                        printf("there was an error in the message; requesting retransmission\n");
+                    }
                     // need to reject message and wait for new one
                 }
             case STANDBY:
                 if(standby_byte==ESC_5d) {
                     if(buf[0]==FLAG) {
-                        STOP = TRUE;
                         can_receive_bit = can_receive_bit ^ 0x40;
-                        // BCC2 was 0x7D, and there was nothing wrong with the message; we can send RR and return
+                        // BCC2 was 0x7D, and there was nothing wrong with the message; we can send RR
+                        if(can_receive_bit==0x40) {
+                            write(fd, RR_0, 5);
+                        }
+                        else {
+                            write(fd, RR_1, 5);
+                        }
+                        state = START;
                     }
                     else { // didn't receive F, which means 0x7D was NOT the BCC2 byte, and therefore we have to send 0x7D to the packet
                         packet[index] = 0x7D;
@@ -333,8 +353,15 @@ int llread(unsigned char *packet)
                 }
                 else if(standby_byte==ESC_5e) {
                     if(buf[0]==FLAG) {
-                        STOP = TRUE;
+                        can_receive_bit = can_receive_bit ^ 0x40;
                         // BCC2 was 0x7E, and there was nothing wrong with the message; we can send RR and return
+                        if(can_receive_bit==0x40) {
+                            write(fd, RR_0, 5);
+                        }
+                        else {
+                            write(fd, RR_1, 5);
+                        }
+                        state = START;
                     }
                     else { // didn't receive F, which means 0x7E was NOT the BCC2 byte, and therefore we have to send 0x7E to the packet
                         packet[index] = 0x7E;
@@ -352,8 +379,15 @@ int llread(unsigned char *packet)
                     }
                 }
                 else if(buf[0]==FLAG) {
-                    STOP = TRUE;
+                    can_receive_bit = can_receive_bit ^ 0x40;
                     // BCC2 checks off as true, we received the flag, can send RR message and return
+                    if(can_receive_bit==0x40) {
+                        write(fd, RR_0, 5);
+                    }
+                    else {
+                        write(fd, RR_1, 5);
+                    }
+                    state = START;
                 }
                 else if(buf[0]==0x00) { // BCC2 may be 0x00, so we must check for that
                     state = STANDBY;
@@ -377,6 +411,7 @@ int llread(unsigned char *packet)
                 if(buf[0]==FLAG) {
                     DISC = TRUE;
                     //send its own DISC message
+                    write(fd, RECEIVER_DISC, 5);
                     state = START;
                 }
                 else {
