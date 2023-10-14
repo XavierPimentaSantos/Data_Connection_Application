@@ -3,6 +3,8 @@
 #include "application_layer.h"
 
 #include "link_layer.h" // in order to call transmission level functions
+extern int timeout_;
+extern int nTries_;
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)

@@ -65,11 +65,27 @@
 #define TRANSMITTER_DISC [FLAG, A_TC_RR, C_DISC, A_TC_RR^C_DISC, FLAG]
 #define RECEIVER_DISC [FLAG, A_RC_TR, C_DISC, A_RC_TR^C_DISC, FLAG]
 
+#define type_SET 0
+#define type_INFO_0 1
+#define type_INFO_1 2
+#define type_UA 3
+#define type_DISC 4
 
 // isto fica de fora para ser acedido por todas as funções
 int fd;
 struct termios oldtio; // old port parameters
 struct termios newtio; // new port parameters
+
+int timeout_;
+int nTries_;
+
+unsigned char buf_*;
+int bufSize_;
+
+int alarmEnabled = FALSE;
+int alarmCount = 0;
+
+int message_to_send = type_SET;
 
 ////////////////////////////////////////////////
 // LLOPEN
@@ -119,12 +135,47 @@ int llopen(LinkLayer connectionParameters)
     return 1;
 }
 
+void send_message(int signal) {
+    alarmEnabled = FALSE;
+    alarmCount++;
+
+    if(message_to_send==type_SET) {
+        int bytes = write(fd, SET_MESSAGE, 5);
+        printf("%d bytes written\n", bytes);
+    }
+    else if(message_to_send==type_UA) {
+        int bytes = write(fd, TRANSMITTER_UA_MESSAGE, 5);
+        printf("%d bytes written\n", bytes);
+    }
+    else if(message_to_send==type_DISC) {
+        int bytes = write(fd, TRANSMITTER_DISC, 5);
+        printf("%d bytes written\n", bytes);
+    }
+    else if(message_to_send==type_INFO_0) {
+        unsigned char BCC2 = 0x00;
+        unsigned char buf_to_send[bufSize_ + 6] = {0};
+        buf_to_send[0] = FLAG;
+        buf_to_send[1] = A_TC_RR;
+        buf_to_send[2] = C_INFO_0;
+        buf_to_send[3] = A_TC_RR ^ C_INFO_0;
+        for(int i = 4; i < bufSize_; i++) {
+            buf_to_send[i] = buf_[i-4];
+            BCC2 = BCC2 ^ buf_[i-4];
+        }
+        buf_to_send[bufSize_] = BCC2;
+        buf_to_send[bufSize_+1] = FLAG;
+    }
+}
+
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
     // TODO
+    buf_ = buf;
+    bufSize_ = bufSize;
+
     //em tramas I, cria o BCC2 com os 1024 bytes D, e depois é que aplica stuffing
     return 0;
 }
