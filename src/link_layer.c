@@ -55,6 +55,17 @@
 #define got_7d 13
 #define STANDBY 14
 
+#define SET_MESSAGE [FLAG, A_TC_RR, C_SET, A_TC_RR^C_SET, FLAG]
+#define TRANSMITTER_UA_MESSAGE [FLAG, A_RC_TR, C_UA, A_RC_TR^C_UA, FLAG]
+#define RECEIVER_UA_MESSAGE [FLAG, A_TC_RR, C_UA, A_TC_RR^C_UA, FLAG]
+#define REJECT_0 [FLAG, A_TC_RR, C_REJ0, A_TC_RR^C_REJ0, FLAG]
+#define REJECT_1 [FLAG, A_TC_RR, C_REJ1, A_TC_RR^C_REJ1, FLAG]
+#define RR_0 [FLAG, A_TC_RR, C_RR0, A_TC_RR^C_RR0, FLAG]
+#define RR_1 [FLAG, A_TC_RR, C_RR1, A_TC_RR^C_RR1, FLAG]
+#define TRANSMITTER_DISC [FLAG, A_TC_RR, C_DISC, A_TC_RR^C_DISC, FLAG]
+#define RECEIVER_DISC [FLAG, A_RC_TR, C_DISC, A_RC_TR^C_DISC, FLAG]
+
+
 // isto fica de fora para ser acedido por todas as funções
 int fd;
 struct termios oldtio; // old port parameters
