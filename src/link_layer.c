@@ -15,7 +15,25 @@
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
-//isto fica de fora para ser acedido por todas as funções
+// macros
+#define FLAG 0x7E
+
+#define A_TC_RR 0x03 // A for Transmitter commands or Receiver replies
+#define A_RC_TR 0x01 // A for Receiver comands or Transmitter replies
+
+#define C_SET 0x03 // C for SET messages
+#define C_UA 0x07 // C for UA messages
+#define C_RR0 0x05 // C for Receiver to signal it is ready to receive 0-type data message
+#define C_RR1 0x85 // C for Receiver to signal it is ready to receive 1-type data message
+#define C_REJ0 0x01 // C for Receiver to signal it rejects the last 0-type data message
+#define C_REJ1 0x81 // C for Receiver to signal it rejects the last 1-type data message
+#define C_DISC 0x0B // C for DISC messages
+
+#define ESC_SEQUENCE 0x7D // escape sequence for byte stuffing
+#define ESC_5d 0x5D // if 0x7D in Data
+#define ESC_5e 0x5E // if 0x7E in Data
+
+// isto fica de fora para ser acedido por todas as funções
 int fd;
 struct termios oldtio; // old port parameters
 struct termios newtio; // new port parameters
