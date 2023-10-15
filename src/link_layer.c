@@ -123,7 +123,7 @@ int llopen(LinkLayer connectionParameters)
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = 0; // value subject to change
-    newtio.c_cc[VMIN] = 5;  // value subject to change
+    newtio.c_cc[VMIN] = 0;  // value subject to change
 
     // Now clean the line and activate the settings for the port
     // tcflush() discards data written to the object referred to
@@ -168,8 +168,22 @@ void send_message(int signal) {
         buf_to_send[2] = C_INFO_0;
         buf_to_send[3] = A_TC_RR ^ C_INFO_0;
         for(int i = 4; i < bufSize_; i++) {
-            buf_to_send[i] = buf_[i-4];
             BCC2 = BCC2 ^ buf_[i-4];
+            if(buf_[i-4]==0x7E) {
+                buf_to_send[i] = 0x7D;
+                i++;
+                buf_to_send[i] = 0x5E;
+                bufSize_++;
+            }
+            else if(buf_[i-4]==0x7D) {
+                buf_to_send[i] = 0x7D;
+                i++;
+                buf_to_send[i] = 0x5D;
+                bufSize_++;
+            }
+            else {
+                buf_to_send[i] = buf_[i-4];
+            }
         }
         buf_to_send[bufSize_] = BCC2;
         buf_to_send[bufSize_+1] = FLAG;
@@ -184,8 +198,22 @@ void send_message(int signal) {
         buf_to_send[2] = C_INFO_1;
         buf_to_send[3] = A_TC_RR ^ C_INFO_1;
         for(int i = 4; i < bufSize_; i++) {
-            buf_to_send[i] = buf_[i-4];
             BCC2 = BCC2 ^ buf_[i-4];
+            if(buf_[i-4]==0x7E) {
+                buf_to_send[i] = 0x7D;
+                i++;
+                buf_to_send[i] = 0x5E;
+                bufSize_++;
+            }
+            else if(buf_[i-4]==0x7D) {
+                buf_to_send[i] = 0x7D;
+                i++;
+                buf_to_send[i] = 0x5D;
+                bufSize_++;
+            }
+            else {
+                buf_to_send[i] = buf_[i-4];
+            }
         }
         buf_to_send[bufSize_] = BCC2;
         buf_to_send[bufSize_+1] = FLAG;
@@ -209,160 +237,153 @@ int llwrite(const unsigned char *buf, int bufSize)
 
     (void) signal(SIGALRM, send_message);
 
-    while(alarmCount < nTries_ && STOP==FALSE) {
-        if (alarmEnabled == FALSE)
-        {
-            alarm(timeout_); // Set alarm to be triggered in timeout_ seconds
-            alarmEnabled = TRUE;
-        }
+    while(alarmCount < nTries_ && STOP==FALSE)
+    {
+        alarm(timeout_);
+        alarmEnabled = TRUE;
 
-        while (STOP==FALSE)
-        {
-            int byte = read(fd, receiver_message, 1);
-            if(byte <= 0) continue;
-            // IMPLEMENT STATE MACHINE HERE
-            switch(state) {
-                case START:
-                    if(receiver_message[0]==FLAG) {
-                        state = FLAG_1_OK;
+        int byte = read(fd, receiver_message, 1);
+        if(byte <= 0) continue;
+        // IMPLEMENT STATE MACHINE HERE
+        switch(state) {
+            case START:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                break;
+            case FLAG_1_OK:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==A_TC_RR) {
+                    state = A_OK;
+                }
+                else if(receiver_message[0]==A_RC_TR && DISC==TRUE) {
+                    state = A_DISC_OK;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case A_OK:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==C_UA) {
+                    state = C_UA_OK;
+                }
+                else if(receiver_message[0]==C_REJ0 && message_to_send==type_INFO_1) {
+                    state = C_R_0;
+                }
+                else if(receiver_message[0]==C_REJ1 && message_to_send==type_INFO_0) {
+                    state = C_R_1;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case A_DISC_OK:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==C_DISC) {
+                    state = C_DISC_OK;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case C_DISC_OK:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==A_RC_TR^C_DISC) {
+                    state = BCC_DISC_OK;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case BCC_DISC_OK:
+                if(receiver_message[0]==FLAG) {
+                    // received DISC from Receiver, must send UA and terminate connection
+                    alarmCount = 0;
+                    alarm(0); // disable pending alarms (will be restored in the next execution I think)
+                    nTries_ = 1; // we only want to send UA once (acknowledgement on the receiver's part is not needed)
+                    message_to_send = type_UA;
+                    STOP = TRUE; // on the next cycle we exit the execution
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case C_UA_OK:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==A_TC_RR^C_UA) {
+                    state = BCC_UA_OK;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case BCC_UA_OK:
+                if(receiver_message[0]==FLAG) {
+                    //received UA, can invert signal bit, change message type (SET -> I -> DISC -> UA)
+                    //when changing from DISC to UA, also set DISC=TRUE
+                    if(message_to_send==type_SET) {
+                        message_to_send = type_INFO_0;
                     }
-                    break;
-                case FLAG_1_OK:
-                    if(receiver_message[0]==FLAG) {
-                        state = FLAG_1_OK;
+                    else if(message_to_send==type_INFO_0 || message_to_send==type_INFO_1) {
+                        message_to_send = type_DISC;
+                        DISC = TRUE;
                     }
-                    else if(receiver_message[0]==A_TC_RR) {
-                        state = A_OK;
-                    }
-                    else if(receiver_message[0]==A_RC_TR && DISC==TRUE) {
-                        state = A_DISC_OK;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case A_OK:
-                    if(receiver_message[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(receiver_message[0]==C_UA) {
-                        state = C_UA_OK;
-                    }
-                    else if(receiver_message[0]==C_REJ0 && message_to_send==type_INFO_1) {
-                        state = C_R_0;
-                    }
-                    else if(receiver_message[0]==C_REJ1 && message_to_send==type_INFO_0) {
-                        state = C_R_1;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case A_DISC_OK:
-                    if(message_to_send[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(message_to_send[0]==C_DISC) {
-                        state = C_DISC_OK;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case C_DISC_OK:
-                    if(message_to_send[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(message_to_send[0]==A_RC_TR^C_DISC) {
-                        state = BCC_DISC_OK;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case BCC_DISC_OK:
-                    if(message_to_send[0]==FLAG) {
-                        // received DISC from Receiver, must send UA and terminate connection
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case C_UA_OK:
-                    if(message_to_send[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(message_to_send[0]==A_TC_RR^C_UA) {
-                        state = BCC_UA_OK;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case BCC_UA_OK:
-                    if(message_to_send[0]==FLAG) {
-                        //received UA, can invert signal bit, change message type (SET -> I -> DISC -> UA)
-                        //when changing from DISC to UA, also set DISC=TRUE
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case C_R_0:
-                    if(message_to_send[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(message_to_send[0]==A_TC_RR^C_REJ0) {
-                        state = MUST_RESEND;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case C_R_1:
-                    if(message_to_send[0]==FLAG) {
-                        state = FLAG_1_OK;
-                    }
-                    else if(message_to_send[0]==A_TC_RR^C_REJ1) {
-                        state = MUST_RESEND;
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                case MUST_RESEND:
-                    if(message_to_send[0]==FLAG) {
-                        //resend message, reset alarm and alarmCount, etc etc
-                    }
-                    else {
-                        state = START;
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            // Returns after 5 chars have been input
-            int bytes = read(fd, receiver_message, 5);
-            ua[bytes] = '\0'; // Set end of string to '\0', so we can printf
-
-            printf("received UA = ");
-            for(int i = 0; i < BUF_SIZE; i++) {
-                printf("%02X", ua[i]);
-            }
-            printf("\n");
-            printf(":%s:%d\n", ua, bytes);
-
-            if (ua[BUF_SIZE] == '\0') {
-                STOP = TRUE;
-                can_read_UA = TRUE;
-                alarm(0);
-                printf("succesfully received UA\n");
-            }
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case C_R_0:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==A_TC_RR^C_REJ0) {
+                    state = MUST_RESEND;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case C_R_1:
+                if(receiver_message[0]==FLAG) {
+                    state = FLAG_1_OK;
+                }
+                else if(receiver_message[0]==A_TC_RR^C_REJ1) {
+                    state = MUST_RESEND;
+                }
+                else {
+                    state = START;
+                }
+                break;
+            case MUST_RESEND:
+                if(receiver_message[0]==FLAG) {
+                    //resend message, reset alarm and alarmCount, etc etc
+                    alarmCount = 0;
+                    alarmEnabled = FALSE;
+                    alarm(0);
+                    continue; //immediately sends execution to the next "while" cycle (unsure if this works as intended)
+                }
+                else {
+                    state = START;
+                }
+                break;
+            default:
+                break;
         }
     }
-    //em tramas I, cria o BCC2 com os 1024 bytes D, e depois é que aplica stuffing
-    return 0;
+
+    return bufSize_+6;
 }
 
 ////////////////////////////////////////////////
