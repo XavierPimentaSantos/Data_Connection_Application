@@ -54,6 +54,12 @@
 #define BCC_UA_OK 12
 #define got_7d 13
 #define STANDBY 14
+#define A_DISC_OK 15
+#define C_DISC_OK 16
+#define BCC_DISC_OK 17
+#define MUST_RESEND 18
+#define C_R_0 19
+#define C_R_1 20
 
 #define SET_MESSAGE [FLAG, A_TC_RR, C_SET, A_TC_RR^C_SET, FLAG]
 #define TRANSMITTER_UA_MESSAGE [FLAG, A_RC_TR, C_UA, A_RC_TR^C_UA, FLAG]
@@ -197,7 +203,9 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char STOP = FALSE;
     buf_ = buf;
     bufSize_ = bufSize;
-    unsigned char receiver_message[5] = {0};
+    unsigned char receiver_message[1] = {0};
+    unsigned char state = START;
+    unsigned char DISC = FALSE;
 
     (void) signal(SIGALRM, send_message);
 
@@ -210,7 +218,38 @@ int llwrite(const unsigned char *buf, int bufSize)
 
         while (STOP==FALSE)
         {
+            int byte = read(fd, receiver_message, 1);
+            if(byte <= 0) continue;
             // IMPLEMENT STATE MACHINE HERE
+            switch(state) {
+                case START:
+                    if(receiver_message[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    break;
+                case FLAG_1_OK:
+                    if(receiver_message[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(receiver_message[0]==A_TC_RR) {
+                        state = A_OK;
+                    }
+                    else if(receiver_message[0]==A_RC_TR && DISC==TRUE) {
+                        state = A_DISC_OK;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case A_OK:
+                    if(receiver_message[0]==C_UA) {
+                        state = C_UA_OK;
+                    }
+                    else if(receiver_message[0]==C_REJ0 && message_to_send==type_INFO_1) {
+                        state = C_;
+                    }
+                    
+            }
 
             // Returns after 5 chars have been input
             int bytes = read(fd, receiver_message, 5);
