@@ -242,13 +242,104 @@ int llwrite(const unsigned char *buf, int bufSize)
                     }
                     break;
                 case A_OK:
-                    if(receiver_message[0]==C_UA) {
+                    if(receiver_message[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(receiver_message[0]==C_UA) {
                         state = C_UA_OK;
                     }
                     else if(receiver_message[0]==C_REJ0 && message_to_send==type_INFO_1) {
-                        state = C_;
+                        state = C_R_0;
                     }
-                    
+                    else if(receiver_message[0]==C_REJ1 && message_to_send==type_INFO_0) {
+                        state = C_R_1;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case A_DISC_OK:
+                    if(message_to_send[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(message_to_send[0]==C_DISC) {
+                        state = C_DISC_OK;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case C_DISC_OK:
+                    if(message_to_send[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(message_to_send[0]==A_RC_TR^C_DISC) {
+                        state = BCC_DISC_OK;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case BCC_DISC_OK:
+                    if(message_to_send[0]==FLAG) {
+                        // received DISC from Receiver, must send UA and terminate connection
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case C_UA_OK:
+                    if(message_to_send[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(message_to_send[0]==A_TC_RR^C_UA) {
+                        state = BCC_UA_OK;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case BCC_UA_OK:
+                    if(message_to_send[0]==FLAG) {
+                        //received UA, can invert signal bit, change message type (SET -> I -> DISC -> UA)
+                        //when changing from DISC to UA, also set DISC=TRUE
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case C_R_0:
+                    if(message_to_send[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(message_to_send[0]==A_TC_RR^C_REJ0) {
+                        state = MUST_RESEND;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case C_R_1:
+                    if(message_to_send[0]==FLAG) {
+                        state = FLAG_1_OK;
+                    }
+                    else if(message_to_send[0]==A_TC_RR^C_REJ1) {
+                        state = MUST_RESEND;
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                case MUST_RESEND:
+                    if(message_to_send[0]==FLAG) {
+                        //resend message, reset alarm and alarmCount, etc etc
+                    }
+                    else {
+                        state = START;
+                    }
+                    break;
+                default:
+                    break;
             }
 
             // Returns after 5 chars have been input
