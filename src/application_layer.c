@@ -3,13 +3,18 @@
 #include "application_layer.h"
 
 #include "link_layer.h" // in order to call transmission level functions
-extern int timeout_;
-extern int nTries_;
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
     // TODO
+    LinkLayer connection;
+    connection.baudRate = baudRate;
+    connection.nRetransmissions = nTries;
+    connection.timeout = timeout;
+    connection.serialPort = &serialPort; // não funciona, aparentemente serialPort não pode ser um const
+    connection.role = &role;
+
     //calls for opening of port
 
     //IF TRANSMITTER

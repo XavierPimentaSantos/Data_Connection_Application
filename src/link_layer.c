@@ -93,6 +93,9 @@ int message_to_send = type_SET;
 int llopen(LinkLayer connectionParameters)
 {
     // TODO
+    timeout_ = connectionParameters.timeout;
+    nTries_ = connectionParameters.nRetransmissions;
+
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if(fd < 0) {
         perror(connectionParameters.serialPort);
@@ -164,6 +167,24 @@ void send_message(int signal) {
         }
         buf_to_send[bufSize_] = BCC2;
         buf_to_send[bufSize_+1] = FLAG;
+
+        write(fd, buf_to_send, bufSize_ + 6);
+    }
+    else /*if(message_to_send==type_INFO_1)*/ {
+        unsigned char BCC2 = 0x00;
+        unsigned char buf_to_send[bufSize_ + 6] = {0};
+        buf_to_send[0] = FLAG;
+        buf_to_send[1] = A_TC_RR;
+        buf_to_send[2] = C_INFO_1;
+        buf_to_send[3] = A_TC_RR ^ C_INFO_1;
+        for(int i = 4; i < bufSize_; i++) {
+            buf_to_send[i] = buf_[i-4];
+            BCC2 = BCC2 ^ buf_[i-4];
+        }
+        buf_to_send[bufSize_] = BCC2;
+        buf_to_send[bufSize_+1] = FLAG;
+
+        write(fd, buf_to_send, bufSize_ + 6);
     }
 }
 
@@ -173,9 +194,43 @@ void send_message(int signal) {
 int llwrite(const unsigned char *buf, int bufSize)
 {
     // TODO
+    unsigned char STOP = FALSE;
     buf_ = buf;
     bufSize_ = bufSize;
+    unsigned char receiver_message[5] = {0};
 
+    (void) signal(SIGALRM, send_message);
+
+    while(alarmCount < nTries_ && STOP==FALSE) {
+        if (alarmEnabled == FALSE)
+        {
+            alarm(timeout_); // Set alarm to be triggered in timeout_ seconds
+            alarmEnabled = TRUE;
+        }
+
+        while (STOP==FALSE)
+        {
+            // IMPLEMENT STATE MACHINE HERE
+
+            // Returns after 5 chars have been input
+            int bytes = read(fd, receiver_message, 5);
+            ua[bytes] = '\0'; // Set end of string to '\0', so we can printf
+
+            printf("received UA = ");
+            for(int i = 0; i < BUF_SIZE; i++) {
+                printf("%02X", ua[i]);
+            }
+            printf("\n");
+            printf(":%s:%d\n", ua, bytes);
+
+            if (ua[BUF_SIZE] == '\0') {
+                STOP = TRUE;
+                can_read_UA = TRUE;
+                alarm(0);
+                printf("succesfully received UA\n");
+            }
+        }
+    }
     //em tramas I, cria o BCC2 com os 1024 bytes D, e depois é que aplica stuffing
     return 0;
 }
