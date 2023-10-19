@@ -25,12 +25,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
     
     int size = 0;
-
-    // IF TRANSMITTER
-    unsigned char *file_ptr;
+    
+    FILE* file_ptr;
     unsigned char ch;
+    
+    // IF TRANSMITTER
 
-    file_ptr = fopen(*filename, "r");
+    file_ptr = fopen(*filename, "r"); // load the file into file_ptr
 
     do {
         ch = fgetc(file_ptr);
@@ -41,7 +42,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     unsigned char size_size = 0;
     unsigned char size_2 = size;
     while(size_2 != 0) {
-        size_2 >> 8;
+        size_2 = size_2 >> 8;
         size_size++;
     }
 
@@ -89,10 +90,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             bufSize = MAX_PAYLOAD_SIZE;
         }
 
+        unsigned char bufSize_lhs = (unsigned char) bufSize>>8;
+        unsigned char bufSize_rhs = (unsigned char) bufSize;
+
         //loads bufSize bytes of that into array
-        unsigned char buffer[bufSize];
+        unsigned char *buffer;
+        buffer[0] = 1;
+        buffer[1] = bufSize_lhs;
+        buffer[2] = bufSize_rhs;
         for(int j = 0; j < bufSize; j++) {
-            buffer[j] = file_ptr[i + j];
+            buffer[j+3] = file_ptr[i + j];
         }
         // calls llwrite() for those bytes
         if(llwrite(buffer, bufSize) == bufSize) {
@@ -117,7 +124,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     //IF RECEIVER
+    
+    unsigned char *read_from_here;
     //reads from array
+    
     //when array ends, calls for llread()
     //if llread() returns 1, read from array into file, using state machine to determine type of data
     //if llread() returns -1, try again, ignoring what already exists in the array
