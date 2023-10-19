@@ -118,7 +118,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
     }
 
-    //when llwrite() returns succesfully for the last time, call llclose() and finish execution
+    //when llwrite() returns succesfully for the last time, close the file, call llclose() and finish execution
+    fclose(file_ptr);
     if(llclose(FALSE) < 0) { // could be TRUE if we want to see the statistics
         exit(-1);
     }
@@ -127,9 +128,22 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     
     unsigned char *read_from_here;
     //reads from array
+    file_ptr = fopen(*filename, 'w');
     
-    //when array ends, calls for llread()
-    //if llread() returns 1, read from array into file, using state machine to determine type of data
-    //if llread() returns -1, try again, ignoring what already exists in the array
-    //when it reads the END control packet, calls for llclose() and finishes execution
+    while(1 == 1) {
+        // call llread()
+        size = llread(read_from_here);
+        if(size == -1) {
+            continue; // we ignore what already exists in the array and try again
+        }
+        else {
+            // succeeded in receiving the data; use state machine to determine what to do with it
+        }
+    }
+
+    // we good, received everything correctly; we can close the file and the connection
+    fclose(file_ptr);
+    if(llclose(FALSE) < 0) {
+        exit(-1);
+    }
 }
