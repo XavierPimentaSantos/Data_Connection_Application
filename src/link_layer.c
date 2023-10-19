@@ -92,6 +92,9 @@ int alarmEnabled = FALSE;
 int alarmCount = 0;
 
 int message_to_send = type_SET;
+unsigned char DISC = FALSE;
+
+unsigned char can_receive_bit = 0x00;
 
 ////////////////////////////////////////////////
 // LLOPEN
@@ -158,6 +161,7 @@ void send_message(int signal) {
     }
     else if(message_to_send==type_DISC) {
         int bytes = write(fd, TRANSMITTER_DISC, 5);
+        DISC = TRUE;
         printf("%d bytes written\n", bytes);
     }
     else if(message_to_send==type_INFO_0) {
@@ -233,7 +237,6 @@ int llwrite(const unsigned char *buf, int bufSize)
     bufSize_ = bufSize;
     unsigned char receiver_message[1] = {0};
     unsigned char state = START;
-    unsigned char DISC = FALSE;
 
     (void) signal(SIGALRM, send_message);
 
@@ -330,15 +333,16 @@ int llwrite(const unsigned char *buf, int bufSize)
                 break;
             case BCC_UA_OK:
                 if(receiver_message[0]==FLAG) {
-                    //received UA, can invert signal bit, change message type (SET -> I -> DISC -> UA)
-                    //when changing from DISC to UA, also set DISC=TRUE
                     if(message_to_send==type_SET) {
                         message_to_send = type_INFO_0;
                     }
-                    else if(message_to_send==type_INFO_0 || message_to_send==type_INFO_1) {
-                        message_to_send = type_DISC;
-                        DISC = TRUE;
+                    else if(message_to_send==type_INFO_0) {
+                        message_to_send = type_INFO_1;
                     }
+                    else if(message_to_send==type_INFO_1) {
+                        message_to_send = type_INFO_0;
+                    }
+                    state = START;
                 }
                 else {
                     state = START;
@@ -398,9 +402,8 @@ int llread(unsigned char *packet)
     unsigned char buf[1] = {0};
     unsigned char received_size = 0;
     unsigned char index = 0;
-    unsigned char DISC = FALSE;
+    unsigned char DISC_r = FALSE;
     unsigned char SET = FALSE;
-    unsigned char can_receive_bit = 0x00;
     unsigned char standby_byte;
 
     while(STOP == FALSE) {
@@ -413,7 +416,6 @@ int llread(unsigned char *packet)
                     state = FLAG_1_OK;
                 }
                 break;
-            
             case FLAG_1_OK:
                 if(buf[0]==FLAG) {
                     state = FLAG_1_OK;
@@ -421,7 +423,7 @@ int llread(unsigned char *packet)
                 else if(buf[0]==A_TC_RR) {
                     state = A_OK;
                 }
-                else if(DISC==TRUE && buf[0]==A_RC_TR) {
+                else if(DISC_r==TRUE && buf[0]==A_RC_TR) {
                     state = A_UA_OK;
                 }
                 else {
@@ -666,7 +668,7 @@ int llread(unsigned char *packet)
                 break;
             case awaiting_FLAG_DISC:
                 if(buf[0]==FLAG) {
-                    DISC = TRUE;
+                    DISC_r = TRUE;
                     //send its own DISC message
                     write(fd, RECEIVER_DISC, 5);
                     state = START;
