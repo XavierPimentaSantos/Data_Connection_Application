@@ -29,6 +29,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     FILE* file_ptr;
     unsigned char ch;
     
+    unsigned char *START_CONTROL_PACKET;
+    unsigned char *END_CONTROL_PACKET;
+
     // IF TRANSMITTER
     if(*role = LlTx) {
         file_ptr = fopen(*filename, "r"); // load the file into file_ptr
@@ -45,8 +48,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             size_2 = size_2 >> 8;
             size_size++;
         }
-
-        unsigned char *START_CONTROL_PACKET;
+        
         int scp_i = 0;
 
         START_CONTROL_PACKET[scp_i++] = 2; // it is a START Control packet
@@ -63,7 +65,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
         // scp_i is the size of START_CONTROL_PACKET and END_CONTROL_PACKET
 
-        unsigned char *END_CONTROL_PACKET = START_CONTROL_PACKET;
+        END_CONTROL_PACKET = START_CONTROL_PACKET;
         END_CONTROL_PACKET[0] = 3; // ECP is essentially SCP but with 3 intead of 2 on the Control byte
 
         unsigned char PROCEED_START = FALSE;
