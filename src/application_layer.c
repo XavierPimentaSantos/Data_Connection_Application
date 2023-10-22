@@ -19,48 +19,60 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     strcpy(connection.serialPort, serialPort);
     connection.role = *role;
 
+    printf("started application layer for %s\n", role);
+
     // to be used by the Receiver side
     unsigned char *new_filename = {0};
     unsigned char *read_from_here = {0};
+
+    // to be used by Transmitter side
+    unsigned char *buffer = {0};
+    unsigned char *buffer_helper = {0};
+    
+    unsigned int size = 0;
+    
+    FILE* file_ptr;
+    char ch;
+    
+    unsigned char *START_CONTROL_PACKET = {0};
+    unsigned char *END_CONTROL_PACKET = {0};
 
     //calls for opening of port
     if(llopen(connection) < 0) {
         exit(-1);
     }
-    
-    int size = 0;
-    
-    FILE* file_ptr;
-    unsigned char ch;
-    
-    unsigned char *START_CONTROL_PACKET;
-    unsigned char *END_CONTROL_PACKET;
 
     // IF TRANSMITTER
-    if(*role == LlTx) {
+    if(role == LlTx || (role[0]=='t' && role[1]=='x')) {
         file_ptr = fopen(filename, "r"); // load the file into file_ptr
-
+	printf("opened %s\n", filename);	
         do {
             ch = fgetc(file_ptr);
             size++;
+            // printf("read a byte\n");
         } while (ch != EOF); 
-
+	printf("read file ig, size is %i\n", size);
         // create the static Control packets
         unsigned char size_size = 0;
-        unsigned char size_2 = size;
+        unsigned int size_2 = size;
         while(size_2 != 0) {
             size_2 = size_2 >> 8;
             size_size++;
         }
         
         int scp_i = 0;
-
+	printf("before assigning values to SCP\n");
         START_CONTROL_PACKET[scp_i++] = 2; // it is a START Control packet
+        printf("h");
         START_CONTROL_PACKET[scp_i++] = 0; // section: size of file
+        printf("h");
         START_CONTROL_PACKET[scp_i++] = size_size; // size of size of file
+        printf("h");
         START_CONTROL_PACKET[scp_i] = size; // size of file
+        printf("h");
         scp_i = scp_i + size_size -1;
         START_CONTROL_PACKET[scp_i++] = 1;
+        printf("h");
         int keep_scp_i = scp_i++;
         START_CONTROL_PACKET[keep_scp_i] = 0;
         for(int k = 0; filename[k] != '\0'; k++) {
@@ -68,10 +80,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             START_CONTROL_PACKET[keep_scp_i]++;
         }
         // scp_i is the size of START_CONTROL_PACKET and END_CONTROL_PACKET
-
+	printf("assigned values to SCP, will assign the same to ECP\n");
         END_CONTROL_PACKET = START_CONTROL_PACKET;
         END_CONTROL_PACKET[0] = 3; // ECP is essentially SCP but with 3 intead of 2 on the Control byte
-
+	printf("successfully assigned values to ECP\n");
         unsigned char PROCEED_START = FALSE;
         unsigned char PROCEED_END = FALSE;
 
@@ -84,7 +96,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 continue;
             }
         }
-
+	printf("sent the SCP\n");
         int i = 0;
         int bufSize;
 
@@ -100,11 +112,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             unsigned char bufSize_rhs = (unsigned char) bufSize;
 
             //loads bufSize bytes of that into array
-            unsigned char *buffer;
+            
             buffer[0] = 1;
             buffer[1] = bufSize_lhs;
             buffer[2] = bufSize_rhs;
-            unsigned char *buffer_helper;
+            
             // for(int j = 0; j < bufSize; j++) {
             //     buffer[j+3] = file_ptr[i + j];
             // }
@@ -112,6 +124,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             // calls llwrite() for those bytes
             if(llwrite(buffer, bufSize) == bufSize) {
                 i += bufSize; // no errors, we can send another group of bytes
+                printf("successfully sent %i bytes\n", bufSize);
             }
             // if there was an error, we resend the bytes
         } // do this until there is no more data to send
@@ -137,7 +150,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     else {
         
         //reads from array
-        
+        printf("i am a %s\n", role);
         // fopen used to be here
         int data_size;
         int packet_size;
@@ -150,6 +163,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             packet_size = llread(read_from_here);
             if(packet_size == -1) {
                 continue; // we ignore what already exists in the array and try again
+                printf("ah deu merda aqui no llread\n");
             }
             else {
                 // succeeded in receiving the data; use state machine to determine what to do with it
@@ -157,6 +171,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     data_size = read_from_here[1]<<8;
                     data_size += read_from_here[2];
                     fwrite(read_from_here+3, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
+                    printf("succesfully wrote %i bytes to new file\n", data_size);
                     // i += data_size;
                     size -= data_size;
                 }
@@ -166,8 +181,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     for(int j = 0; j < name_size; j++) {
                         new_filename[j] = read_from_here[3+j];
                     }
-                    new_filename[name_size] = '2';
                     file_ptr = fopen(filename, "a+"); // we want to append to file, if it already exists, or create new if it does not exist
+                    printf("opened file for writing\n");
                     file_size_size = read_from_here[name_size+4];
                     for(int j = 0; j < file_size_size; j++) {
                         size = size << 8;
