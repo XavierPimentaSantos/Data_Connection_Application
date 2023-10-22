@@ -61,15 +61,15 @@
 #define C_R_0 19
 #define C_R_1 20
 
-#define SET_MESSAGE [FLAG, A_TC_RR, C_SET, A_TC_RR^C_SET, FLAG]
-#define TRANSMITTER_UA_MESSAGE [FLAG, A_RC_TR, C_UA, A_RC_TR^C_UA, FLAG]
-#define RECEIVER_UA_MESSAGE [FLAG, A_TC_RR, C_UA, A_TC_RR^C_UA, FLAG]
-#define REJECT_0 [FLAG, A_TC_RR, C_REJ0, A_TC_RR^C_REJ0, FLAG]
-#define REJECT_1 [FLAG, A_TC_RR, C_REJ1, A_TC_RR^C_REJ1, FLAG]
-#define RR_0 [FLAG, A_TC_RR, C_RR0, A_TC_RR^C_RR0, FLAG]
-#define RR_1 [FLAG, A_TC_RR, C_RR1, A_TC_RR^C_RR1, FLAG]
-#define TRANSMITTER_DISC [FLAG, A_TC_RR, C_DISC, A_TC_RR^C_DISC, FLAG]
-#define RECEIVER_DISC [FLAG, A_RC_TR, C_DISC, A_RC_TR^C_DISC, FLAG]
+unsigned char *SET_MESSAGE = {FLAG, A_TC_RR, C_SET, A_TC_RR^C_SET, FLAG};
+unsigned char *TRANSMITTER_UA_MESSAGE = {FLAG, A_RC_TR, C_UA, A_RC_TR^C_UA, FLAG};
+unsigned char *RECEIVER_UA_MESSAGE = {FLAG, A_TC_RR, C_UA, A_TC_RR^C_UA, FLAG};
+unsigned char *REJECT_0 = {FLAG, A_TC_RR, C_REJ0, A_TC_RR^C_REJ0, FLAG};
+unsigned char *REJECT_1 = {FLAG, A_TC_RR, C_REJ1, A_TC_RR^C_REJ1, FLAG};
+unsigned char *RR_0 = {FLAG, A_TC_RR, C_RR0, A_TC_RR^C_RR0, FLAG};
+unsigned char *RR_1 = {FLAG, A_TC_RR, C_RR1, A_TC_RR^C_RR1, FLAG};
+unsigned char *TRANSMITTER_DISC = {FLAG, A_TC_RR, C_DISC, A_TC_RR^C_DISC, FLAG};
+unsigned char *RECEIVER_DISC = {FLAG, A_RC_TR, C_DISC, A_RC_TR^C_DISC, FLAG};
 
 #define type_SET 0
 #define type_INFO_0 1
@@ -85,7 +85,7 @@ struct termios newtio; // new port parameters
 int timeout_;
 int nTries_;
 
-unsigned char buf_*;
+unsigned char *buf_;
 int bufSize_;
 
 int alarmEnabled = FALSE;
@@ -166,7 +166,7 @@ void send_message(int signal) {
     }
     else if(message_to_send==type_INFO_0) {
         unsigned char BCC2 = 0x00;
-        unsigned char buf_to_send[bufSize_ + 6] = {0};
+        unsigned char *buf_to_send;
         buf_to_send[0] = FLAG;
         buf_to_send[1] = A_TC_RR;
         buf_to_send[2] = C_INFO_0;
@@ -196,7 +196,7 @@ void send_message(int signal) {
     }
     else /*if(message_to_send==type_INFO_1)*/ {
         unsigned char BCC2 = 0x00;
-        unsigned char buf_to_send[bufSize_ + 6] = {0};
+        unsigned char *buf_to_send;
         buf_to_send[0] = FLAG;
         buf_to_send[1] = A_TC_RR;
         buf_to_send[2] = C_INFO_1;
@@ -654,7 +654,7 @@ int llread(unsigned char *packet)
                 }
                 else {
                     state = READ_INFO;
-                    packet[index] = standby_byte
+                    packet[index] = standby_byte;
                 }
                 break;
             case awaiting_FLAG:

@@ -16,8 +16,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     connection.baudRate = baudRate;
     connection.nRetransmissions = nTries;
     connection.timeout = timeout;
-    connection.serialPort = serialPort; 
-    connection.role = &role;
+    *connection.serialPort = serialPort; 
+    connection.role = *role;
 
     //calls for opening of port
     if(llopen(connection) < 0) {
@@ -33,7 +33,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     unsigned char *END_CONTROL_PACKET;
 
     // IF TRANSMITTER
-    if(*role = LlTx) {
+    if(*role == LlTx) {
         file_ptr = fopen(*filename, "r"); // load the file into file_ptr
 
         do {
@@ -100,9 +100,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             buffer[0] = 1;
             buffer[1] = bufSize_lhs;
             buffer[2] = bufSize_rhs;
-            for(int j = 0; j < bufSize; j++) {
-                buffer[j+3] = file_ptr[i + j];
-            }
+            unsigned char *buffer_helper;
+            // for(int j = 0; j < bufSize; j++) {
+            //     buffer[j+3] = file_ptr[i + j];
+            // }
+            (void) fwrite(buffer_helper, sizeof buffer[1], bufSize, file_ptr+i);
             // calls llwrite() for those bytes
             if(llwrite(buffer, bufSize) == bufSize) {
                 i += bufSize; // no errors, we can send another group of bytes
@@ -131,11 +133,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     else {
         unsigned char *read_from_here;
         //reads from array
-        file_ptr = fopen(*filename, 'w');
+        char *new_filename;
+        // fopen used to be here
         int data_size;
         int packet_size;
         int file_size_size;
         int loop = TRUE;
+        // int i = 0;
 
         while(loop == TRUE) {
             // call llread()
@@ -148,17 +152,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 if(read_from_here[0]==1) { // data
                     data_size = read_from_here[1]<<8;
                     data_size += read_from_here[2];
-                    fwrite(read_from_here+3, sizeof read_from_here[0], data_size, file_ptr+i);
-                    i += data_size;
+                    fwrite(read_from_here+3, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
+                    // i += data_size;
                     size -= data_size;
                 }
                 else if(read_from_here[0]==2) { // START frame
                     START_CONTROL_PACKET = read_from_here;
                     int name_size = read_from_here[2];
                     for(int j = 0; j < name_size; j++) {
-                        filename[j] = read_from_here[3+j];
+                        new_filename[j] = read_from_here[3+j];
                     }
-                    filename[name_size] = '_copy';
+                    new_filename[name_size] = '_copy';
+                    file_ptr = fopen(*filename, 'a+'); // we want to append to file, if it already exists, or create new if it does not exist
                     file_size_size = read_from_here[name_size+4];
                     for(int j = 0; j < file_size_size; j++) {
                         size = size << 8;
@@ -199,5 +204,5 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
     }
 
-    return 0;
+    return;
 }
