@@ -16,8 +16,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     connection.baudRate = baudRate;
     connection.nRetransmissions = nTries;
     connection.timeout = timeout;
-    *connection.serialPort = serialPort; 
+    strcpy(connection.serialPort, serialPort);
     connection.role = *role;
+
+    // to be used by the Receiver side
+    unsigned char *new_filename = {0};
+    unsigned char *read_from_here = {0};
 
     //calls for opening of port
     if(llopen(connection) < 0) {
@@ -34,7 +38,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     // IF TRANSMITTER
     if(*role == LlTx) {
-        file_ptr = fopen(*filename, "r"); // load the file into file_ptr
+        file_ptr = fopen(filename, "r"); // load the file into file_ptr
 
         do {
             ch = fgetc(file_ptr);
@@ -131,9 +135,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     //IF RECEIVER
     else {
-        unsigned char *read_from_here;
+        
         //reads from array
-        char *new_filename;
+        
         // fopen used to be here
         int data_size;
         int packet_size;
@@ -162,8 +166,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     for(int j = 0; j < name_size; j++) {
                         new_filename[j] = read_from_here[3+j];
                     }
-                    new_filename[name_size] = '_copy';
-                    file_ptr = fopen(*filename, 'a+'); // we want to append to file, if it already exists, or create new if it does not exist
+                    new_filename[name_size] = '2';
+                    file_ptr = fopen(filename, "a+"); // we want to append to file, if it already exists, or create new if it does not exist
                     file_size_size = read_from_here[name_size+4];
                     for(int j = 0; j < file_size_size; j++) {
                         size = size << 8;

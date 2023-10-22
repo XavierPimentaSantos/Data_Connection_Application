@@ -19,25 +19,25 @@
 #define TRUE 1
 #define FALSE 0
 
-#define FLAG 0x7E
+// unsigned char FLAG = 0x7E;
 
-#define A_TC_RR 0x03 // A for Transmitter commands or Receiver replies
-#define A_RC_TR 0x01 // A for Receiver comands or Transmitter replies
+// unsigned char A_TC_RR = 0x03; // A for Transmitter commands or Receiver replies
+// unsigned char A_RC_TR = 0x01; // A for Receiver comands or Transmitter replies
 
-#define C_SET 0x03 // C for SET messages
-#define C_UA 0x07 // C for UA messages
-#define C_RR0 0x05 // C for Receiver to signal it is ready to receive 0-type data message
-#define C_RR1 0x85 // C for Receiver to signal it is ready to receive 1-type data message
-#define C_REJ0 0x01 // C for Receiver to signal it rejects the last 0-type data message
-#define C_REJ1 0x81 // C for Receiver to signal it rejects the last 1-type data message
-#define C_DISC 0x0B // C for DISC messages
+// unsigned char C_SET = 0x03; // C for SET messages
+// unsigned char C_UA = 0x07; // C for UA messages
+// unsigned char C_RR0 = 0x05; // C for Receiver to signal it is ready to receive 0-type data message
+// unsigned char C_RR1 = 0x85; // C for Receiver to signal it is ready to receive 1-type data message
+// unsigned char C_REJ0 = 0x01; // C for Receiver to signal it rejects the last 0-type data message
+// unsigned char C_REJ1 = 0x81; // C for Receiver to signal it rejects the last 1-type data message
+// unsigned char C_DISC = 0x0B; // C for DISC messages
 
-#define C_INFO_0 0x00 // C for Information messages with byte 0
-#define C_INFO_1 0x40 // C for Information messages with byte 1
+// unsigned char C_INFO_0 = 0x00; // C for Information messages with byte 0
+// unsigned char C_INFO_1 = 0x40; // C for Information messages with byte 1
 
-#define ESC_SEQUENCE 0x7D // escape sequence for byte stuffing
-#define ESC_5d 0x5D // if 0x7D in Data
-#define ESC_5e 0x5E // if 0x7E in Data
+// unsigned char ESC_SEQUENCE = 0x7D; // escape sequence for byte stuffing
+// unsigned char ESC_5d = 0x5D; // if 0x7D in Data
+// unsigned char ESC_5e = 0x5E; // if 0x7E in Data
 
 #define START 0
 #define FLAG_1_OK 1
@@ -61,15 +61,15 @@
 #define C_R_0 19
 #define C_R_1 20
 
-unsigned char *SET_MESSAGE = {FLAG, A_TC_RR, C_SET, A_TC_RR^C_SET, FLAG};
-unsigned char *TRANSMITTER_UA_MESSAGE = {FLAG, A_RC_TR, C_UA, A_RC_TR^C_UA, FLAG};
-unsigned char *RECEIVER_UA_MESSAGE = {FLAG, A_TC_RR, C_UA, A_TC_RR^C_UA, FLAG};
-unsigned char *REJECT_0 = {FLAG, A_TC_RR, C_REJ0, A_TC_RR^C_REJ0, FLAG};
-unsigned char *REJECT_1 = {FLAG, A_TC_RR, C_REJ1, A_TC_RR^C_REJ1, FLAG};
-unsigned char *RR_0 = {FLAG, A_TC_RR, C_RR0, A_TC_RR^C_RR0, FLAG};
-unsigned char *RR_1 = {FLAG, A_TC_RR, C_RR1, A_TC_RR^C_RR1, FLAG};
-unsigned char *TRANSMITTER_DISC = {FLAG, A_TC_RR, C_DISC, A_TC_RR^C_DISC, FLAG};
-unsigned char *RECEIVER_DISC = {FLAG, A_RC_TR, C_DISC, A_RC_TR^C_DISC, FLAG};
+unsigned char SET_MESSAGE[5] = {0x7E, 0x03, 0x03, 0x00, 0x7E};
+unsigned char TRANSMITTER_UA_MESSAGE[5] = {0x7E, 0x01, 0x07, 0x06, 0x7E};
+unsigned char RECEIVER_UA_MESSAGE[5] = {0x7E, 0x03, 0x07, 0x04, 0x7E};
+unsigned char REJECT_0[5] = {0x7E, 0x03, 0x01, 0x02, 0x7E};
+unsigned char REJECT_1[5] = {0x7E, 0x03, 0x81, 0x82, 0x7E};
+unsigned char RR_0[5] = {0x7E, 0x03, 0x05, 0x02, 0x7E};
+unsigned char RR_1[5] = {0x7E, 0x03, 0x85, 0x82, 0x7E};
+unsigned char TRANSMITTER_DISC[5] = {0x7E, 0x03, 0x0B, 0x08, 0x7E};
+unsigned char RECEIVER_DISC[5] = {0x7E, 0x01, 0x0B, 0x0A, 0x7E};
 
 #define type_SET 0
 #define type_INFO_0 1
@@ -85,7 +85,7 @@ struct termios newtio; // new port parameters
 int timeout_;
 int nTries_;
 
-unsigned char *buf_;
+const unsigned char *buf_;
 int bufSize_;
 
 int alarmEnabled = FALSE;
@@ -147,6 +147,8 @@ int llopen(LinkLayer connectionParameters)
     return 1;
 }
 
+unsigned char *buf_to_send;
+
 void send_message(int signal) {
     alarmEnabled = FALSE;
     alarmCount++;
@@ -166,11 +168,11 @@ void send_message(int signal) {
     }
     else if(message_to_send==type_INFO_0) {
         unsigned char BCC2 = 0x00;
-        unsigned char *buf_to_send;
-        buf_to_send[0] = FLAG;
-        buf_to_send[1] = A_TC_RR;
-        buf_to_send[2] = C_INFO_0;
-        buf_to_send[3] = A_TC_RR ^ C_INFO_0;
+        
+        buf_to_send[0] = 0x7E;
+        buf_to_send[1] = 0x03;
+        buf_to_send[2] = 0x00;
+        buf_to_send[3] = 0x03 ^ 0x00;
         for(int i = 4; i < bufSize_; i++) {
             BCC2 = BCC2 ^ buf_[i-4];
             if(buf_[i-4]==0x7E) {
@@ -190,17 +192,17 @@ void send_message(int signal) {
             }
         }
         buf_to_send[bufSize_] = BCC2;
-        buf_to_send[bufSize_+1] = FLAG;
+        buf_to_send[bufSize_+1] = 0x7E;
 
         write(fd, buf_to_send, bufSize_ + 6);
     }
     else /*if(message_to_send==type_INFO_1)*/ {
         unsigned char BCC2 = 0x00;
-        unsigned char *buf_to_send;
-        buf_to_send[0] = FLAG;
-        buf_to_send[1] = A_TC_RR;
-        buf_to_send[2] = C_INFO_1;
-        buf_to_send[3] = A_TC_RR ^ C_INFO_1;
+
+        buf_to_send[0] = 0x7E;
+        buf_to_send[1] = 0x03;
+        buf_to_send[2] = 0x40;
+        buf_to_send[3] = 0x03 ^ 0x40;
         for(int i = 4; i < bufSize_; i++) {
             BCC2 = BCC2 ^ buf_[i-4];
             if(buf_[i-4]==0x7E) {
@@ -220,7 +222,7 @@ void send_message(int signal) {
             }
         }
         buf_to_send[bufSize_] = BCC2;
-        buf_to_send[bufSize_+1] = FLAG;
+        buf_to_send[bufSize_+1] = 0x7E;
 
         write(fd, buf_to_send, bufSize_ + 6);
     }
@@ -250,18 +252,18 @@ int llwrite(const unsigned char *buf, int bufSize)
         // IMPLEMENT STATE MACHINE HERE
         switch(state) {
             case START:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 break;
             case FLAG_1_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==A_TC_RR) {
+                else if(receiver_message[0]==0x03) {
                     state = A_OK;
                 }
-                else if(receiver_message[0]==A_RC_TR && DISC==TRUE) {
+                else if(receiver_message[0]==0x01 && DISC==TRUE) {
                     state = A_DISC_OK;
                 }
                 else {
@@ -269,16 +271,16 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case A_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==C_UA) {
+                else if(receiver_message[0]==0x07) {
                     state = C_UA_OK;
                 }
-                else if(receiver_message[0]==C_REJ0 && message_to_send==type_INFO_1) {
+                else if(receiver_message[0]==0x01 && message_to_send==type_INFO_1) {
                     state = C_R_0;
                 }
-                else if(receiver_message[0]==C_REJ1 && message_to_send==type_INFO_0) {
+                else if(receiver_message[0]==0x81 && message_to_send==type_INFO_0) {
                     state = C_R_1;
                 }
                 else {
@@ -286,10 +288,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case A_DISC_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==C_DISC) {
+                else if(receiver_message[0]==0x0B) {
                     state = C_DISC_OK;
                 }
                 else {
@@ -297,10 +299,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case C_DISC_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==A_RC_TR^C_DISC) {
+                else if(receiver_message[0]==(0x01^0x0B)) {
                     state = BCC_DISC_OK;
                 }
                 else {
@@ -308,7 +310,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case BCC_DISC_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     // received DISC from Receiver, must send UA and terminate connection
                     alarmCount = 0;
                     alarm(0); // disable pending alarms (will be restored in the next execution I think)
@@ -321,10 +323,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case C_UA_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==A_TC_RR^C_UA) {
+                else if(receiver_message[0]==(0x03^0x07)) {
                     state = BCC_UA_OK;
                 }
                 else {
@@ -332,7 +334,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case BCC_UA_OK:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     if(message_to_send==type_SET) {
                         message_to_send = type_INFO_0;
                     }
@@ -349,10 +351,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case C_R_0:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==A_TC_RR^C_REJ0) {
+                else if(receiver_message[0]==(0x03^0x01)) {
                     state = MUST_RESEND;
                 }
                 else {
@@ -360,10 +362,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case C_R_1:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(receiver_message[0]==A_TC_RR^C_REJ1) {
+                else if(receiver_message[0]==(0x03^0x81)) {
                     state = MUST_RESEND;
                 }
                 else {
@@ -371,7 +373,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 }
                 break;
             case MUST_RESEND:
-                if(receiver_message[0]==FLAG) {
+                if(receiver_message[0]==0x7E) {
                     //resend message, reset alarm and alarmCount, etc etc
                     alarmCount = 0;
                     alarmEnabled = FALSE;
@@ -400,7 +402,7 @@ int llread(unsigned char *packet)
     unsigned char BCC2_calc = 0x00;
     unsigned char state = START;
     unsigned char buf[1] = {0};
-    unsigned char received_size = 0;
+    // unsigned char received_size = 0;
     unsigned char index = 0;
     unsigned char DISC_r = FALSE;
     unsigned char SET = FALSE;
@@ -412,18 +414,18 @@ int llread(unsigned char *packet)
 
         switch(state) {
             case START:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 break;
             case FLAG_1_OK:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(buf[0]==A_TC_RR) {
+                else if(buf[0]==0x03) {
                     state = A_OK;
                 }
-                else if(DISC_r==TRUE && buf[0]==A_RC_TR) {
+                else if(DISC_r==TRUE && buf[0]==0x01) {
                     state = A_UA_OK;
                 }
                 else {
@@ -431,19 +433,19 @@ int llread(unsigned char *packet)
                 }
                 break;
             case A_OK:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(SET==TRUE && (buf[0]==C_INFO_0 && can_receive_bit==C_INFO_0)) {
+                else if(SET==TRUE && (buf[0]==0x00 && can_receive_bit==0x00)) {
                     state = INFO_0;
                 }
-                else if(SET==TRUE && (buf[0]==C_INFO_1 && can_receive_bit==C_INFO_1)) {
+                else if(SET==TRUE && (buf[0]==0x40 && can_receive_bit==0x40)) {
                     state = INFO_1;
                 }
-                else if(buf[0]==C_SET) {
+                else if(buf[0]==0x03) {
                     state = is_SET;
                 }
-                else if(buf[0]==C_DISC) {
+                else if(buf[0]==0x0B) {
                     state = is_DISC;
                 }
                 else {
@@ -451,10 +453,10 @@ int llread(unsigned char *packet)
                 }
                 break;
             case A_UA_OK:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(buf[0]==C_UA) {
+                else if(buf[0]==0x07) {
                     state = C_UA_OK;
                 }
                 else {
@@ -462,7 +464,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case INFO_0:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 else if(buf[0]==0x03) {
@@ -473,7 +475,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case INFO_1:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 else if(buf[0]==0x43) {
@@ -484,10 +486,10 @@ int llread(unsigned char *packet)
                 }
                 break;
             case is_SET:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
-                else if(buf[0]=0x00) {
+                else if(buf[0]==0x00) {
                     state = awaiting_FLAG;
                 }
                 else {
@@ -495,7 +497,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case is_DISC:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 else if(buf[0]==0x08) {
@@ -506,7 +508,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case C_UA_OK:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     state = FLAG_1_OK;
                 }
                 else if(buf[0]==0x06) {
@@ -521,7 +523,7 @@ int llread(unsigned char *packet)
                     state = STANDBY;
                     standby_byte = buf[0];
                 }
-                else if(buf[0]==FLAG) {
+                else if(buf[0]==0x7E) {
                     state = START;
                     index = 0;
                     if(can_receive_bit==0x00) {
@@ -533,7 +535,7 @@ int llread(unsigned char *packet)
                         printf("there was an error in the message; requesting retransmission\n");
                     }
                 }
-                else if(buf[0]==ESC_SEQUENCE) {
+                else if(buf[0]==0x7D) {
                     state = got_7d;
                 }
                 else {
@@ -544,10 +546,10 @@ int llread(unsigned char *packet)
                 }
                 break;
             case got_7d:
-                if(buf[0]==ESC_5d) {
+                if(buf[0]==0x5D) {
                     if(BCC2_calc == 0x7D) {
                         state = STANDBY; // BCC2 could be 0x7D, in which case we need to check for  0x7d 0x5d 0x7e
-                        standby_byte = ESC_5d;
+                        standby_byte = 0x5D;
                     }
                     else {
                        state = READ_INFO;
@@ -556,10 +558,10 @@ int llread(unsigned char *packet)
                         BCC2_calc = BCC2_calc ^ 0x7D; 
                     }   
                 }
-                else if(buf[0]==ESC_5e) {
+                else if(buf[0]==0x5E) {
                     if(BCC2_calc == 0x7E) {
                         state = STANDBY; // BCC2 could be 0x7E, in which case we need to check for 0x7d 0x5e 0x7e
-                        standby_byte = ESC_5e;
+                        standby_byte = 0x5E;
                     }
                     else {
                         state = READ_INFO;
@@ -583,8 +585,8 @@ int llread(unsigned char *packet)
                     // need to reject message and wait for new one
                 }
             case STANDBY:
-                if(standby_byte==ESC_5d) {
-                    if(buf[0]==FLAG) {
+                if(standby_byte==0x5D) {
+                    if(buf[0]==0x7E) {
                         can_receive_bit = can_receive_bit ^ 0x40;
                         // BCC2 was 0x7D, and there was nothing wrong with the message; we can send RR
                         if(can_receive_bit==0x40) {
@@ -598,7 +600,7 @@ int llread(unsigned char *packet)
                     else { // didn't receive F, which means 0x7D was NOT the BCC2 byte, and therefore we have to send 0x7D to the packet
                         packet[index] = 0x7D;
                         index++;
-                        if(buf[0]==ESC_SEQUENCE) {
+                        if(buf[0]==0x7D) {
                             state = got_7d;
                             BCC2_calc = 0x00;
                         }
@@ -610,8 +612,8 @@ int llread(unsigned char *packet)
                         }
                     }
                 }
-                else if(standby_byte==ESC_5e) {
-                    if(buf[0]==FLAG) {
+                else if(standby_byte==0x5E) {
+                    if(buf[0]==0x7E) {
                         can_receive_bit = can_receive_bit ^ 0x40;
                         // BCC2 was 0x7E, and there was nothing wrong with the message; we can send RR and return
                         if(can_receive_bit==0x40) {
@@ -625,7 +627,7 @@ int llread(unsigned char *packet)
                     else { // didn't receive F, which means 0x7E was NOT the BCC2 byte, and therefore we have to send 0x7E to the packet
                         packet[index] = 0x7E;
                         index++;
-                        if(buf[0]==ESC_SEQUENCE) {
+                        if(buf[0]==0x7D) {
                             state = got_7d;
                             BCC2_calc = 0x00;
                         }
@@ -637,7 +639,7 @@ int llread(unsigned char *packet)
                         }
                     }
                 }
-                else if(buf[0]==FLAG) {
+                else if(buf[0]==0x7E) {
                     can_receive_bit = can_receive_bit ^ 0x40;
                     // BCC2 checks off as true, we received the flag, can send RR message and return
                     if(can_receive_bit==0x40) {
@@ -658,7 +660,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case awaiting_FLAG:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     SET = TRUE;
                     state = START;
                 }
@@ -667,7 +669,7 @@ int llread(unsigned char *packet)
                 }
                 break;
             case awaiting_FLAG_DISC:
-                if(buf[0]==FLAG) {
+                if(buf[0]==0x7E) {
                     DISC_r = TRUE;
                     //send its own DISC message
                     write(fd, RECEIVER_DISC, 5);
