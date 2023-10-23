@@ -239,14 +239,17 @@ int llwrite(const unsigned char *buf, int bufSize)
     bufSize_ = bufSize;
     unsigned char receiver_message[1] = {0};
     unsigned char state = START;
-
-    (void) signal(SIGALRM, send_message);
+    //printf("llwrite was called\n");
+    (void)signal(SIGALRM, send_message);
 
     while(alarmCount < nTries_ && STOP==FALSE)
     {
-        alarm(timeout_);
-        alarmEnabled = TRUE;
-
+    	if(alarmEnabled == FALSE) {
+            alarm(timeout_);
+            alarmEnabled = TRUE;
+	}
+	//printf("CURRENT STATE: %i\n", state);
+	//printf("byte read = 0x%02X\n", receiver_message[0]);
         int byte = read(fd, receiver_message, 1);
         if(byte <= 0) continue;
         // IMPLEMENT STATE MACHINE HERE
@@ -254,6 +257,9 @@ int llwrite(const unsigned char *buf, int bufSize)
             case START:
                 if(receiver_message[0]==0x7E) {
                     state = FLAG_1_OK;
+                }
+                else {
+                    state = START;
                 }
                 break;
             case FLAG_1_OK:
@@ -317,6 +323,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                     nTries_ = 1; // we only want to send UA once (acknowledgement on the receiver's part is not needed)
                     message_to_send = type_UA;
                     STOP = TRUE; // on the next cycle we exit the execution
+                    printf("will disconnect\n");
                 }
                 else {
                     state = START;
@@ -337,12 +344,15 @@ int llwrite(const unsigned char *buf, int bufSize)
                 if(receiver_message[0]==0x7E) {
                     if(message_to_send==type_SET) {
                         message_to_send = type_INFO_0;
+                        printf("sent SET message and was acknowledged\n");
                     }
                     else if(message_to_send==type_INFO_0) {
                         message_to_send = type_INFO_1;
+                        printf("sent INFO_0 message and was acknowledged\n");
                     }
-                    else if(message_to_send==type_INFO_1) {
+                    else /*if(message_to_send==type_INFO_1)*/ {
                         message_to_send = type_INFO_0;
+                        printf("sent INFO_1 message and was acknowledged\n");
                     }
                     state = START;
                 }
@@ -389,7 +399,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
 
-    return bufSize_+6;
+    return bufSize_;
 }
 
 ////////////////////////////////////////////////
@@ -407,11 +417,11 @@ int llread(unsigned char *packet)
     unsigned char DISC_r = FALSE;
     unsigned char SET = FALSE;
     unsigned char standby_byte;
-
+    printf("llread was called\n");
     while(STOP == FALSE) {
         int byte = read(fd, buf, 1);
         if(byte <= 0) continue;
-
+	printf("State = %i\n", state);
         switch(state) {
             case START:
                 if(buf[0]==0x7E) {
@@ -595,6 +605,7 @@ int llread(unsigned char *packet)
                         else {
                             write(fd, RR_1, 5);
                         }
+                        printf("got data\n");
                         state = START;
                     }
                     else { // didn't receive F, which means 0x7D was NOT the BCC2 byte, and therefore we have to send 0x7D to the packet
@@ -622,6 +633,7 @@ int llread(unsigned char *packet)
                         else {
                             write(fd, RR_1, 5);
                         }
+                        printf("read data\n");
                         state = START;
                     }
                     else { // didn't receive F, which means 0x7E was NOT the BCC2 byte, and therefore we have to send 0x7E to the packet
@@ -644,9 +656,11 @@ int llread(unsigned char *packet)
                     // BCC2 checks off as true, we received the flag, can send RR message and return
                     if(can_receive_bit==0x40) {
                         write(fd, RR_0, 5);
+                        printf("received INFO_0\n");
                     }
                     else {
                         write(fd, RR_1, 5);
+                        printf("received INFO_1\n");
                     }
                     state = START;
                 }
@@ -663,6 +677,7 @@ int llread(unsigned char *packet)
                 if(buf[0]==0x7E) {
                     SET = TRUE;
                     state = START;
+                    write(fd, RECEIVER_UA_MESSAGE, 5);
                 }
                 else {
                     state = START;
@@ -671,8 +686,10 @@ int llread(unsigned char *packet)
             case awaiting_FLAG_DISC:
                 if(buf[0]==0x7E) {
                     DISC_r = TRUE;
+                    printf("received DISC from Tx\n");
                     //send its own DISC message
                     write(fd, RECEIVER_DISC, 5);
+                    printf("sent DISC to Tx\n");
                     state = START;
                 }
                 else {
