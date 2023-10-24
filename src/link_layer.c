@@ -39,6 +39,7 @@
 // unsigned char ESC_5d = 0x5D; // if 0x7D in Data
 // unsigned char ESC_5e = 0x5E; // if 0x7E in Data
 
+// llread() state machine macros
 #define START 0
 #define FLAG_1_OK 1
 #define A_OK 2
@@ -61,6 +62,14 @@
 #define C_R_0 19
 #define C_R_1 20
 
+// possible values for message_to_send
+#define type_SET 0
+#define type_INFO_0 1
+#define type_INFO_1 2
+#define type_UA 3
+#define type_DISC 4
+
+// static messages
 unsigned char SET_MESSAGE[5] = {0x7E, 0x03, 0x03, 0x00, 0x7E};
 unsigned char TRANSMITTER_UA_MESSAGE[5] = {0x7E, 0x01, 0x07, 0x06, 0x7E};
 unsigned char RECEIVER_UA_MESSAGE[5] = {0x7E, 0x03, 0x07, 0x04, 0x7E};
@@ -71,25 +80,18 @@ unsigned char RR_1[5] = {0x7E, 0x03, 0x85, 0x82, 0x7E};
 unsigned char TRANSMITTER_DISC[5] = {0x7E, 0x03, 0x0B, 0x08, 0x7E};
 unsigned char RECEIVER_DISC[5] = {0x7E, 0x01, 0x0B, 0x0A, 0x7E};
 
-#define type_SET 0
-#define type_INFO_0 1
-#define type_INFO_1 2
-#define type_UA 3
-#define type_DISC 4
-
 // isto fica de fora para ser acedido por todas as funções
-int fd;
+int fd; // port
 struct termios oldtio; // old port parameters
 struct termios newtio; // new port parameters
 
 int timeout_;
 int nTries_;
+int alarmEnabled = FALSE;
+int alarmCount = 0;
 
 unsigned char *buf_[3000];
 int bufSize_ = 0;
-
-int alarmEnabled = FALSE;
-int alarmCount = 0;
 
 int message_to_send = type_SET;
 unsigned char DISC = FALSE;
