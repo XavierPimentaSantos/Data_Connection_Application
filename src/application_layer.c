@@ -104,7 +104,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             	printf("%02X", START_CONTROL_PACKET[j]);
             }
             printf("\n");
-            if((f = llwrite(*START_CONTROL_PACKET, scp_i)) > 0 /*== scp_i*/) {
+            if((f = llwrite(START_CONTROL_PACKET, scp_i)) > 0 /*== scp_i*/) {
                 PROCEED_START = TRUE;
             }
             else {
@@ -123,7 +123,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             else {
                 bufSize = MAX_PAYLOAD_SIZE;
             }
-	    printf("bufSize = %i\n", bufSize);
+	    printf("bufSize Tx = %i\n", bufSize);
             unsigned char bufSize_lhs = (unsigned char) (bufSize>>8);
             unsigned char bufSize_rhs = (unsigned char) bufSize;
 
@@ -132,17 +132,27 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             buffer[0] = 1;
             buffer[1] = bufSize_lhs;
             buffer[2] = bufSize_rhs;
+            //printf("bufSize is 0x%2X\n", bufSize);
+            printf("bufSize is 0x%2X%2X\n", bufSize_lhs, bufSize_rhs);
 
             // for(int j = 0; j < bufSize; j++) {
             //     buffer[j+3] = file_ptr[i + j];
             // }
             if(can_seek==TRUE) {
                 fseek(file_ptr, i, SEEK_SET);
+            	(void) fread(buffer/*_helper*/+3, 1, bufSize-3, file_ptr/*+i*/);    
                 can_seek = FALSE;
             }
-            printf("file_ptr = %i\n", file_ptr);
-            (void) fread(buffer/*_helper*/+3, sizeof buffer[1], bufSize-3, file_ptr/*+i*/);
+            //printf("file_ptr = %i\n", file_ptr);
+            else {
+            	(void) fread(buffer/*_helper*/+3, 1, bufSize-3, file_ptr/*+i*/);
+            }
             
+            printf("Tx will send buf = 0x");
+            for(int m = 0; m < bufSize; m++) {
+            	printf("%2x", (unsigned char) buffer[m]);
+            }
+            printf("\n");
             // calls llwrite() for those bytes
             if(llwrite(buffer, bufSize) >= /*==*/ bufSize) {
                 i += bufSize; // no errors, we can send another group of bytes
