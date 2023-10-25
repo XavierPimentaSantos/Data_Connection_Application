@@ -106,6 +106,174 @@ unsigned char DISC_final = FALSE; // TRUE after Rx replies to DISC message
 
 unsigned char can_receive_bit = 0x00; // used by llread() to know whether to expect INFO_0 or INFO_1
 
+unsigned char *buf_to_send[3000] = {0}; // 3 * MAX_PAYLOAD_SIZE, more than enough space
+
+void send_message(int signal) {
+    alarmEnabled = FALSE;
+    alarmCount++;
+
+	printf("message_to_send = %i\n", message_to_send);
+
+    if(message_to_send==type_SET) {
+        int bytes = write(fd, SET_MESSAGE, 5);
+        printf("%d bytes written\n", bytes);
+    }
+    else if(message_to_send==type_UA) {
+        int bytes = write(fd, TRANSMITTER_UA_MESSAGE, 5);
+        printf("%d bytes written\n", bytes);
+    }
+    else if(message_to_send==type_DISC) {
+        int bytes = write(fd, TRANSMITTER_DISC, 5);
+        DISC = TRUE;
+        printf("%d bytes written\n", bytes);
+    }
+    else {
+        unsigned char BCC2 = 0x00; // used to calculate the BCC2 of the bytes added into buf_to_send
+        int actual_bufSize_ = bufSize_ + 4; // +4: we account for the first 4 static bytes; +=1 when we insert an escape character sequence into buf_to_send
+
+        // insert the static information bytes (F, A, C, BCC1) into buf_to_send
+        buf_to_send[0] = 0x7E;
+        buf_to_send[1] = 0x03;
+        if(message_to_send==type_INFO_0) {
+            buf_to_send[2] = 0x00;
+            buf_to_send[3] = 0x03; // 0x00^0x03
+        }
+        else /*if(message_to_send==type_INFO_1)*/ {
+            buf_to_send[2] = 0x40;
+            buf_to_send[3] = 0x43; // 0x40^0x03
+        }
+
+        // insert data values (D1...Dn) into buf_to_send
+        for(int i = 0, i_helper = 0; i < bufSize_; i++) {
+            unsigned char read_byte = (unsigned char) buf_[i];
+            BCC2 ^= read_byte;
+            if(read_byte==0x7E) {
+                buf_to_send[4 + i + i_helper] = 0x7D;
+                i_helper += 1;
+                buf_to_send[4 + i + i_helper] = 0x5E;
+                actual_bufSize_ += 1;
+            }
+            else if(read_byte==0x7D) {
+                buf_to_send[4 + i + i_helper] = 0x7D;
+                i_helper += 1;
+                buf_to_send[4 + i + i_helper] = 0x5D;
+                actual_bufSize_ += 1;
+            }
+            else {
+                buf_to_send[4 + i + i_helper] = read_byte;
+            }
+        }
+
+        // insert BCC2 and F into buf_to_send
+        buf_to_send[++actual_bufSize_] = BCC2;
+        buf_to_send[++actual_bufSize_] = 0x7E;
+
+        // write buf_to_send to fd
+        (void) write(fd, buf_to_send, actual_bufSize_);
+    }
+    // else if(message_to_send==type_INFO_0) {
+    //     unsigned char BCC2 = 0x00;
+    //     int bufSize_helper = 0;
+    //     buf_to_send[0] = 0x7E;
+    //     buf_to_send[1] = 0x03;
+    //     buf_to_send[2] = 0x00;
+    //     buf_to_send[3] = 0x03; // 0x03^0x00
+    //     printf("added static values\n");
+    //     for(int i = 4; i < bufSize_+4; i++) {
+    //     	unsigned char read_byte = buf_[i-4];
+    //     	printf("read_byte = 0x%2X\n", read_byte);
+    //         BCC2 ^= read_byte;
+    //         if(read_byte==0x7E) {
+    //             buf_to_send[i] = 0x7D;
+    //             printf("h");
+    //             i++;
+    //             printf("h");
+    //             buf_to_send[i] = 0x5E;
+    //             printf("h");
+    //             bufSize_helper++;
+    //             printf("h\n");
+    //         }
+    //         else if(read_byte==0x7D) {
+    //             buf_to_send[i] = 0x7D;
+    //             printf("j");
+    //             i++;
+    //             printf("j");
+    //             buf_to_send[i] = 0x5D;
+    //             printf("j");
+    //             bufSize_helper++;
+    //         	printf("j\n");
+    //         }
+    //         else {
+    //             buf_to_send[i] = read_byte;
+    //             printf("k\n");
+    //         }
+    //         printf("buf_to_send = 0x");
+	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
+	// 			printf("%2X", buf_to_send[l]);
+	// 		}
+	// 		printf("\n");
+    //     }
+    //     buf_to_send[bufSize_+bufSize_helper+4] = BCC2;
+    //     buf_to_send[bufSize_+bufSize_helper+5] = 0x7E;
+	// 	printf("buf_to_send = 0x");
+	// 	for(int l = 0; l < bufSize_+6; l++) {
+	// 		printf("%2X", buf_to_send[l]);
+	// 	}
+	// 	printf("\n");
+    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
+    // }
+    // else /*if(message_to_send==type_INFO_1)*/ {
+    //     unsigned char BCC2 = 0x00;
+    //     int bufSize_helper = 0;
+    //     buf_to_send[0] = 0x7E;
+    //     buf_to_send[1] = 0x03;
+    //     buf_to_send[2] = 0x40;
+    //     buf_to_send[3] = 0x43; // 0x03^0x40
+    //     printf("added static values\n");
+    //     for(int i = 4; i < bufSize_+4; i++) {
+    //     	unsigned char read_byte = buf_[i-4];
+    //         BCC2 ^= read_byte;
+    //         if(read_byte==0x7E) {
+    //             buf_to_send[i] = 0x7D;
+    //             printf("h");
+    //             i++;
+    //             printf("h");
+    //             buf_to_send[i] = 0x5E;
+    //             printf("h");
+    //             bufSize_helper++;
+    //             printf("h\n");
+    //         }
+    //         else if(read_byte==0x7D) {
+    //             buf_to_send[i] = 0x7D;
+    //             printf("j");
+    //             i++;
+    //             printf("j");
+    //             buf_to_send[i] = 0x5D;
+    //             printf("j");
+    //             bufSize_helper++;
+    //         	printf("j\n");
+    //         }
+    //         else {
+    //             buf_to_send[i] = read_byte;
+    //             printf("k\n");
+    //         }
+    //         printf("buf_to_send = 0x");
+	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
+	// 			printf("%2X", buf_to_send[l]);
+	// 		}
+	// 		printf("\n");
+    //     }
+    //     buf_to_send[bufSize_+4] = BCC2;
+    //     buf_to_send[bufSize_+5] = 0x7E;
+	// 	printf("buf_to_send = 0x");
+	// 	for(int l = 0; l < bufSize_+6; l++) {
+	// 		printf("%2X", buf_to_send[l]);
+	// 	}
+	// 	printf("\n");
+    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
+    // }
+}
+
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
@@ -295,173 +463,7 @@ int llopen(LinkLayer connectionParameters)
     return 1;
 }
 
-unsigned char *buf_to_send[3000] = {0}; // 3 * MAX_PAYLOAD_SIZE, more than enough space
 
-void send_message(int signal) {
-    alarmEnabled = FALSE;
-    alarmCount++;
-
-	printf("message_to_send = %i\n", message_to_send);
-
-    if(message_to_send==type_SET) {
-        int bytes = write(fd, SET_MESSAGE, 5);
-        printf("%d bytes written\n", bytes);
-    }
-    else if(message_to_send==type_UA) {
-        int bytes = write(fd, TRANSMITTER_UA_MESSAGE, 5);
-        printf("%d bytes written\n", bytes);
-    }
-    else if(message_to_send==type_DISC) {
-        int bytes = write(fd, TRANSMITTER_DISC, 5);
-        DISC = TRUE;
-        printf("%d bytes written\n", bytes);
-    }
-    else {
-        unsigned char BCC2 = 0x00; // used to calculate the BCC2 of the bytes added into buf_to_send
-        int actual_bufSize_ = bufSize_ + 4; // +4: we account for the first 4 static bytes; +=1 when we insert an escape character sequence into buf_to_send
-
-        // insert the static information bytes (F, A, C, BCC1) into buf_to_send
-        buf_to_send[0] = 0x7E;
-        buf_to_send[1] = 0x03;
-        if(message_to_send==type_INFO_0) {
-            buf_to_send[2] = 0x00;
-            buf_to_send[3] = 0x03; // 0x00^0x03
-        }
-        else /*if(message_to_send==type_INFO_1)*/ {
-            buf_to_send[2] = 0x40;
-            buf_to_send[3] = 0x43; // 0x40^0x03
-        }
-
-        // insert data values (D1...Dn) into buf_to_send
-        for(int i = 0, i_helper = 0; i < bufSize_; i++) {
-            unsigned char read_byte = (unsigned char) buf_[i];
-            BCC2 ^= read_byte;
-            if(read_byte==0x7E) {
-                buf_to_send[4 + i + i_helper] = 0x7D;
-                i_helper += 1;
-                buf_to_send[4 + i + i_helper] = 0x5E;
-                actual_bufSize_ += 1;
-            }
-            else if(read_byte==0x7D) {
-                buf_to_send[4 + i + i_helper] = 0x7D;
-                i_helper += 1;
-                buf_to_send[4 + i + i_helper] = 0x5D;
-                actual_bufSize_ += 1;
-            }
-            else {
-                buf_to_send[4 + i + i_helper] = read_byte;
-            }
-        }
-
-        // insert BCC2 and F into buf_to_send
-        buf_to_send[++actual_bufSize_] = BCC2;
-        buf_to_send[++actual_bufSize_] = 0x7E;
-
-        // write buf_to_send to fd
-        (void) write(fd, buf_to_send, actual_bufSize_);
-    }
-    // else if(message_to_send==type_INFO_0) {
-    //     unsigned char BCC2 = 0x00;
-    //     int bufSize_helper = 0;
-    //     buf_to_send[0] = 0x7E;
-    //     buf_to_send[1] = 0x03;
-    //     buf_to_send[2] = 0x00;
-    //     buf_to_send[3] = 0x03; // 0x03^0x00
-    //     printf("added static values\n");
-    //     for(int i = 4; i < bufSize_+4; i++) {
-    //     	unsigned char read_byte = buf_[i-4];
-    //     	printf("read_byte = 0x%2X\n", read_byte);
-    //         BCC2 ^= read_byte;
-    //         if(read_byte==0x7E) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("h");
-    //             i++;
-    //             printf("h");
-    //             buf_to_send[i] = 0x5E;
-    //             printf("h");
-    //             bufSize_helper++;
-    //             printf("h\n");
-    //         }
-    //         else if(read_byte==0x7D) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("j");
-    //             i++;
-    //             printf("j");
-    //             buf_to_send[i] = 0x5D;
-    //             printf("j");
-    //             bufSize_helper++;
-    //         	printf("j\n");
-    //         }
-    //         else {
-    //             buf_to_send[i] = read_byte;
-    //             printf("k\n");
-    //         }
-    //         printf("buf_to_send = 0x");
-	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%2X", buf_to_send[l]);
-	// 		}
-	// 		printf("\n");
-    //     }
-    //     buf_to_send[bufSize_+bufSize_helper+4] = BCC2;
-    //     buf_to_send[bufSize_+bufSize_helper+5] = 0x7E;
-	// 	printf("buf_to_send = 0x");
-	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%2X", buf_to_send[l]);
-	// 	}
-	// 	printf("\n");
-    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
-    // }
-    // else /*if(message_to_send==type_INFO_1)*/ {
-    //     unsigned char BCC2 = 0x00;
-    //     int bufSize_helper = 0;
-    //     buf_to_send[0] = 0x7E;
-    //     buf_to_send[1] = 0x03;
-    //     buf_to_send[2] = 0x40;
-    //     buf_to_send[3] = 0x43; // 0x03^0x40
-    //     printf("added static values\n");
-    //     for(int i = 4; i < bufSize_+4; i++) {
-    //     	unsigned char read_byte = buf_[i-4];
-    //         BCC2 ^= read_byte;
-    //         if(read_byte==0x7E) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("h");
-    //             i++;
-    //             printf("h");
-    //             buf_to_send[i] = 0x5E;
-    //             printf("h");
-    //             bufSize_helper++;
-    //             printf("h\n");
-    //         }
-    //         else if(read_byte==0x7D) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("j");
-    //             i++;
-    //             printf("j");
-    //             buf_to_send[i] = 0x5D;
-    //             printf("j");
-    //             bufSize_helper++;
-    //         	printf("j\n");
-    //         }
-    //         else {
-    //             buf_to_send[i] = read_byte;
-    //             printf("k\n");
-    //         }
-    //         printf("buf_to_send = 0x");
-	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%2X", buf_to_send[l]);
-	// 		}
-	// 		printf("\n");
-    //     }
-    //     buf_to_send[bufSize_+4] = BCC2;
-    //     buf_to_send[bufSize_+5] = 0x7E;
-	// 	printf("buf_to_send = 0x");
-	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%2X", buf_to_send[l]);
-	// 	}
-	// 	printf("\n");
-    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
-    // }
-}
 
 ////////////////////////////////////////////////
 // LLWRITE
@@ -735,8 +737,8 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     unsigned char transmitter_message[1] = {0};
     int index = 0;
     unsigned char DISC_r = FALSE;
-    unsigned char standby_byte;
-    unsigned char last_read = 0x00; // arbitrary value
+    // unsigned char standby_byte;
+    unsigned char last_read = 0x00;
     int ret = 0;
 
     /*
@@ -1189,7 +1191,7 @@ int llclose(int showStatistics)
                     if(close_buf[0]==0x7E) {
                         close_state = 1;
                     }
-                    else if(open_buf[0]==0x01) {
+                    else if(close_buf[0]==0x01) {
                         close_state = 2;
                     }
                     else {
