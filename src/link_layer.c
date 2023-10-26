@@ -146,6 +146,7 @@ void send_message(int signal) {
         // insert data values (D1...Dn) into buf_to_send
         for(int i = 0, i_helper = 0; i < bufSize_; i++) {
             unsigned char read_byte = (unsigned char) buf_[i];
+            printf("byte put into message = 0x%02X\n", read_byte);
             BCC2 ^= read_byte;
             if(read_byte==0x7E) {
                 buf_to_send[4 + i + i_helper] = 0x7D;
@@ -165,9 +166,16 @@ void send_message(int signal) {
         }
 
         // insert BCC2 and F into buf_to_send
-        buf_to_send[++actual_bufSize_] = BCC2;
-        buf_to_send[++actual_bufSize_] = 0x7E;
-
+        buf_to_send[actual_bufSize_++] = BCC2;
+        buf_to_send[actual_bufSize_++] = 0x7E;
+	
+	printf("message = 0x");
+	for(int k = 0; k < actual_bufSize_; k++) {
+		printf("%02X", buf_to_send[k]);
+	}
+	printf("\n");
+	printf("ABF = %i\n", actual_bufSize_);
+	
         // write buf_to_send to fd
         (void) write(fd, buf_to_send, actual_bufSize_);
     }
@@ -490,12 +498,14 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char receiver_message[1] = {0}; // message from Receiver
     unsigned char state = state_START;
 
+    printf("buf = 0x");
     for(int n = 0; n < bufSize; n++) {
     	buf_[n] = buf[n]; // copy every u_char from buf to buf_
-    	// printf("%2x", buf_[n]);
+    		printf("%02x", buf_[n]);
   	}
   	bufSize_ = bufSize;
     
+    printf("\n");
     printf("bufSize = %i\n", bufSize);
     printf("llwrite was called\n");
     
@@ -749,7 +759,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     unsigned char read_STOP = FALSE; // TRUE after receiving a correct frame and sending appropriate RR reply
     unsigned char BCC2_calc = 0x00; // used to calculate the BCC2 of data frames
     unsigned char state = state_START;
-    unsigned char *transmitter_message[1] = {0};
+    unsigned char transmitter_message[1] = {0};
     int index = 0;
     unsigned char DISC_r = FALSE;
     unsigned char standby_byte;
@@ -768,23 +778,23 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     while(read_STOP == FALSE) {
         int byte = read(fd, transmitter_message, 1);
         if(byte <= 0) continue;
-        
+        printf("byte read initially = 0x%02X\n", transmitter_message[0]);
         switch(state) {
             // main states (F1 = 0x7E)
             case state_START:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    //printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
                 	state = state_START;
-                	printf("byte read = 0x%02X\n", transmitter_message[0]);
+                	//printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             case state_FLAG_1_OK:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    //printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else if(transmitter_message[0]==0x03) {
                     state = state_A_OK;
