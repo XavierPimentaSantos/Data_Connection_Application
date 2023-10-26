@@ -396,6 +396,8 @@ int llopen(LinkLayer connectionParameters)
         }
         alarm(0);
         alarmCount = 0;
+        alarmEnabled = FALSE;
+        message_to_send = type_INFO_0;
         return 1;
     }
 
@@ -408,51 +410,64 @@ int llopen(LinkLayer connectionParameters)
                 case 0: // START
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     break;
                 case 1: // RECEIVED FLAG
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     else if(open_buf[0]==0x03) {
                         open_state = 2;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     break;
                 case 2: // RECEIVED A
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
-                    else if(open_buf[0]==0x07) {
+                    else if(open_buf[0]==0x03) {
                         open_state = 3;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     break;
                 case 3: // RECEIVED C
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
-                    else if(open_buf[0]==0x04) {
+                    else if(open_buf[0]==0x00) {
                         open_state = 4;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     break;
                 case 4: // RECEIVED BCC
                     if(open_buf[0]==0x7E) {
                         open_STOP = TRUE;
-                        write(fd, &RECEIVER_UA_MESSAGE, 5);
+                        write(fd, RECEIVER_UA_MESSAGE, 5);
+                        printf("sent UA message\n");
                     }
                     else {
                         open_state = 0;
+                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
                     }
                     break;
             }
@@ -490,8 +505,8 @@ int llwrite(const unsigned char *buf, int bufSize)
     	if(alarmEnabled == FALSE) {
             alarm(timeout_);
             alarmEnabled = TRUE;
-	    }
-	    //printf("CURRENT STATE: %i\n", state);
+	}
+	//printf("CURRENT STATE: %i\n", state);
 	
         int byte = read(fd, receiver_message, 1);
         if(byte <= 0) continue;
@@ -734,11 +749,11 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     unsigned char read_STOP = FALSE; // TRUE after receiving a correct frame and sending appropriate RR reply
     unsigned char BCC2_calc = 0x00; // used to calculate the BCC2 of data frames
     unsigned char state = state_START;
-    unsigned char transmitter_message[1] = {0};
+    unsigned char *transmitter_message[1] = {0};
     int index = 0;
     unsigned char DISC_r = FALSE;
-    // unsigned char standby_byte;
-    unsigned char last_read = 0x00;
+    unsigned char standby_byte;
+    unsigned char last_read = 0x00; // arbitrary value
     int ret = 0;
 
     /*
