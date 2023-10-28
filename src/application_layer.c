@@ -20,25 +20,29 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     connection.nRetransmissions = nTries;
     connection.timeout = timeout;
     strcpy(connection.serialPort, serialPort);
-    connection.role = *role;
+    if(strcmp(role, "rx") == 0)
+        connection.role = LlRx;
+    else if(strcmp(role, "tx") == 0)
+        connection.role = LlTx;
+    else return;
 
     printf("started application layer for %s\n", role);
 
     // to be used by the Receiver side
-    unsigned char *new_filename[50] = {0}; // adicionar tamanho aqui
-    unsigned char *read_from_here[MAX_PAYLOAD_SIZE] = {0}; // e aqui
+    unsigned char new_filename[50] = {0}; // adicionar tamanho aqui
+    unsigned char read_from_here[MAX_PAYLOAD_SIZE] = {0}; // e aqui
 
     // to be used by Transmitter side
-    unsigned char *buffer[MAX_PAYLOAD_SIZE] = {0}; // e aqui
-    unsigned char *buffer_helper[MAX_PAYLOAD_SIZE] = {0}; // e aqui
+    unsigned char buffer[MAX_PAYLOAD_SIZE] = {0}; // e aqui
+    // unsigned char *buffer_helper[MAX_PAYLOAD_SIZE] = {0}; // e aqui
     
     unsigned int size = 0;
     
     FILE *file_ptr;
     char ch;
     
-    unsigned char *START_CONTROL_PACKET[310] = {0};
-    unsigned char *END_CONTROL_PACKET[310] = {0};
+    unsigned char START_CONTROL_PACKET[310] = {0};
+    unsigned char END_CONTROL_PACKET[310] = {0};
 
     //calls for opening of port
     if(llopen(connection) < 0) {
@@ -46,19 +50,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     // IF TRANSMITTER
-    if(role == LlTx || (role[0]=='t' && role[1]=='x')) {
+    if(connection.role == LlTx) {
         file_ptr = fopen(filename, "r"); // load the file into file_ptr
-	printf("opened %s\n", filename);
-	struct stat st;
-	if(stat(filename, &st) == 0) {
-	    size = st.st_size;
-	}
-        /*do {
-            ch = fgetc(file_ptr);
-            size++;
-            // printf("read a byte\n");
-        } while (ch != -1);*/
-	printf("read file ig, size is %i\n", size); // size está errado?
+	    printf("opened %s\n", filename);
+	    
+        struct stat st;
+	    if(stat(filename, &st) == 0) {
+            size = st.st_size;
+        }
+	    printf("read file ig, size is %i\n", size);
+
         // create the static Control packets
         unsigned char size_size = 0;
         unsigned int size_2 = size;
@@ -68,16 +69,19 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
         
         int scp_i = 0;
-	printf("before assigning values to SCP\n");
+	    printf("before assigning values to SCP\n");
         START_CONTROL_PACKET[scp_i++] = 2; // it is a START Control packet
         printf("h");
         START_CONTROL_PACKET[scp_i++] = 0; // section: size of file
         printf("h");
         START_CONTROL_PACKET[scp_i++] = size_size; // size of size of file
         printf("h");
-        START_CONTROL_PACKET[scp_i] = size; // size of file
+        for(int l = 1; l <= size_size; l++) {
+            START_CONTROL_PACKET[scp_i + l - 1] = (unsigned char) (size >> ((size_size - l) * 8));
+        }
+        // START_CONTROL_PACKET[scp_i] = size; // size of file
         printf("h");
-        scp_i = scp_i + size_size -1;
+        scp_i = scp_i + size_size;
         START_CONTROL_PACKET[scp_i++] = 1;
         printf("h");
         int keep_scp_i = scp_i++;
@@ -87,16 +91,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             START_CONTROL_PACKET[keep_scp_i]++;
         }
         // scp_i is the size of START_CONTROL_PACKET and END_CONTROL_PACKET
-	printf("\nassigned values to SCP, will assign the same to ECP\n");
+	    printf("\nassigned values to SCP, will assign the same to ECP\n");
         END_CONTROL_PACKET[0] = 3; // ECP is essentially SCP but with 3 intead of 2 on the Control byte
-        for(int j = 0; j < 310; j++) {
+        for(int j = 1; j < scp_i; j++) {
             END_CONTROL_PACKET[j] = START_CONTROL_PACKET[j];
         }
-	printf("successfully assigned values to ECP\n");
+	    printf("successfully assigned values to ECP\n");
+
         unsigned char PROCEED_START = FALSE;
         unsigned char PROCEED_END = FALSE;
-	int f;
-        // sends the START_CONTROL_PACKET    
+	    int f;
+        
+        // send the START_CONTROL_PACKET    
         while(PROCEED_START == FALSE) {
             printf("sending %i bytes\n", scp_i);
             printf("data = 0x");
@@ -112,10 +118,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 continue;
             }
         }
-	printf("sent the SCP\n");
+	    printf("sent the SCP\n");
+
         int i = 0;
         int bufSize;
-	int can_seek = FALSE;
+	    int can_seek = FALSE;
         while(i != size) {
             if(size - i < MAX_PAYLOAD_SIZE) {
                 bufSize = size - i;
@@ -123,17 +130,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             else {
                 bufSize = MAX_PAYLOAD_SIZE;
             }
-	    printf("bufSize Tx = %i\n", bufSize);
+	        printf("bufSize Tx = %i\n", bufSize);
             unsigned char bufSize_lhs = (unsigned char) (bufSize>>8);
-            unsigned char bufSize_rhs = (unsigned char) bufSize;
-
-            //loads bufSize bytes of that into array
-            
+            unsigned char bufSize_rhs = (unsigned char) bufSize;            
             buffer[0] = 1;
             buffer[1] = bufSize_lhs;
             buffer[2] = bufSize_rhs;
-            //printf("bufSize is 0x%2X\n", bufSize);
-            printf("bufSize is 0x%2X%2X\n", bufSize_lhs, bufSize_rhs);
+            //printf("bufSize is 0x%02X\n", bufSize);
+            printf("bufSize is 0x%02X%02X\n", bufSize_lhs, bufSize_rhs);
 
             // for(int j = 0; j < bufSize; j++) {
             //     buffer[j+3] = file_ptr[i + j];
@@ -150,7 +154,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             
             printf("Tx will send buf = 0x");
             for(int m = 0; m < bufSize; m++) {
-            	printf("%2x", (unsigned char) buffer[m]);
+            	printf("%02X", (unsigned char) buffer[m]);
             }
             printf("\n");
             // calls llwrite() for those bytes
@@ -164,7 +168,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         // send the END_CONTROL_PACKET
         while(PROCEED_END == FALSE) {
-            if(llwrite(*END_CONTROL_PACKET, scp_i) > 0 /*== scp_i*/) {
+            if(llwrite(END_CONTROL_PACKET, scp_i) > 0 /*== scp_i*/) {
                 PROCEED_END = TRUE;
             }
             else {
@@ -201,7 +205,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             else {
                 // succeeded in receiving the data; use state machine to determine what to do with it
                 if(read_from_here[0]==1) { // data
-                    data_size = *read_from_here[1]<<8;
+                    data_size = (read_from_here[1]<<8);
                     data_size += read_from_here[2];
                     fwrite(read_from_here+3, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
                     printf("succesfully wrote %i bytes to new file\n", data_size);

@@ -106,7 +106,7 @@ unsigned char DISC_final = FALSE; // TRUE after Rx replies to DISC message
 
 unsigned char can_receive_bit = 0x00; // used by llread() to know whether to expect INFO_0 or INFO_1
 
-unsigned char *buf_to_send[3000] = {0}; // 3 * MAX_PAYLOAD_SIZE, more than enough space
+unsigned char buf_to_send[3000] = {0}; // 3 * MAX_PAYLOAD_SIZE, more than enough space
 
 void send_message(int signal) {
     alarmEnabled = FALSE;
@@ -146,7 +146,7 @@ void send_message(int signal) {
         // insert data values (D1...Dn) into buf_to_send
         for(int i = 0, i_helper = 0; i < bufSize_; i++) {
             unsigned char read_byte = (unsigned char) buf_[i];
-            printf("byte put into message = 0x%02X\n", read_byte);
+            // printf("byte put into message = 0x%02X\n", read_byte);
             BCC2 ^= read_byte;
             if(read_byte==0x7E) {
                 buf_to_send[4 + i + i_helper] = 0x7D;
@@ -169,12 +169,12 @@ void send_message(int signal) {
         buf_to_send[actual_bufSize_++] = BCC2;
         buf_to_send[actual_bufSize_++] = 0x7E;
 	
-	printf("message = 0x");
-	for(int k = 0; k < actual_bufSize_; k++) {
-		printf("%02X", buf_to_send[k]);
-	}
-	printf("\n");
-	printf("ABF = %i\n", actual_bufSize_);
+        printf("message = 0x");
+        for(int k = 0; k < actual_bufSize_; k++) {
+            printf("%02X", buf_to_send[k]);
+        }
+        printf("\n");
+        printf("ABF = %i\n", actual_bufSize_);
 	
         // write buf_to_send to fd
         (void) write(fd, buf_to_send, actual_bufSize_);
@@ -189,7 +189,7 @@ void send_message(int signal) {
     //     printf("added static values\n");
     //     for(int i = 4; i < bufSize_+4; i++) {
     //     	unsigned char read_byte = buf_[i-4];
-    //     	printf("read_byte = 0x%2X\n", read_byte);
+    //     	printf("read_byte = 0x%02X\n", read_byte);
     //         BCC2 ^= read_byte;
     //         if(read_byte==0x7E) {
     //             buf_to_send[i] = 0x7D;
@@ -217,7 +217,7 @@ void send_message(int signal) {
     //         }
     //         printf("buf_to_send = 0x");
 	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%2X", buf_to_send[l]);
+	// 			printf("%02X", buf_to_send[l]);
 	// 		}
 	// 		printf("\n");
     //     }
@@ -225,7 +225,7 @@ void send_message(int signal) {
     //     buf_to_send[bufSize_+bufSize_helper+5] = 0x7E;
 	// 	printf("buf_to_send = 0x");
 	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%2X", buf_to_send[l]);
+	// 		printf("%02X", buf_to_send[l]);
 	// 	}
 	// 	printf("\n");
     //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
@@ -267,7 +267,7 @@ void send_message(int signal) {
     //         }
     //         printf("buf_to_send = 0x");
 	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%2X", buf_to_send[l]);
+	// 			printf("%02X", buf_to_send[l]);
 	// 		}
 	// 		printf("\n");
     //     }
@@ -275,7 +275,7 @@ void send_message(int signal) {
     //     buf_to_send[bufSize_+5] = 0x7E;
 	// 	printf("buf_to_send = 0x");
 	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%2X", buf_to_send[l]);
+	// 		printf("%02X", buf_to_send[l]);
 	// 	}
 	// 	printf("\n");
     //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
@@ -418,53 +418,53 @@ int llopen(LinkLayer connectionParameters)
                 case 0: // START
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     break;
                 case 1: // RECEIVED FLAG
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else if(open_buf[0]==0x03) {
                         open_state = 2;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     break;
                 case 2: // RECEIVED A
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else if(open_buf[0]==0x03) {
                         open_state = 3;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     break;
                 case 3: // RECEIVED C
                     if(open_buf[0]==0x7E) {
                         open_state = 1;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else if(open_buf[0]==0x00) {
                         open_state = 4;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     else {
                         open_state = 0;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     break;
                 case 4: // RECEIVED BCC
@@ -475,7 +475,7 @@ int llopen(LinkLayer connectionParameters)
                     }
                     else {
                         open_state = 0;
-                        printf("read a byte open_read = 0x%2X\n", open_buf[0]);
+                        printf("read a byte open_read = 0x%02X\n", open_buf[0]);
                     }
                     break;
             }
@@ -483,7 +483,7 @@ int llopen(LinkLayer connectionParameters)
         return 1;
     }
 
-    return 1;
+    return -1;
 }
 
 
@@ -501,22 +501,22 @@ int llwrite(const unsigned char *buf, int bufSize)
     printf("buf = 0x");
     for(int n = 0; n < bufSize; n++) {
     	buf_[n] = buf[n]; // copy every u_char from buf to buf_
-    		printf("%02x", buf_[n]);
+    		printf("%02X", buf_[n]);
   	}
-  	bufSize_ = bufSize;
-    
     printf("\n");
     printf("bufSize = %i\n", bufSize);
     printf("llwrite was called\n");
     
+  	bufSize_ = bufSize;
+    
     (void)signal(SIGALRM, send_message); // activate alarm-based message sending
 
-    while(alarmCount < nTries_ && write_STOP==FALSE) {
+    while(alarmCount < nTries_ || write_STOP==FALSE) {
     	if(alarmEnabled == FALSE) {
             alarm(timeout_);
             alarmEnabled = TRUE;
-	}
-	//printf("CURRENT STATE: %i\n", state);
+        }
+        //printf("CURRENT STATE: %i\n", state);
 	
         int byte = read(fd, receiver_message, 1);
         if(byte <= 0) continue;
@@ -737,6 +737,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                     else {
                         message_to_send = type_INFO_0;
                     }
+                    return bufSize_;
                 }
                 else {
                     state = state_START;
@@ -747,7 +748,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
 
-    return bufSize_;
+    return -1;
 }
 
 ////////////////////////////////////////////////
@@ -800,19 +801,19 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     state = state_A_OK;
                     printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
-                else if(DISC_r==TRUE && transmitter_message[0]==0x01) {
+                /* else if(DISC_r==TRUE && transmitter_message[0]==0x01) {
                     state = state_A_UA_OK;
                     printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
+                } */
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             case state_A_OK:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else if(transmitter_message[0]==can_receive_bit) {
                     if(can_receive_bit==0x00) {
@@ -841,11 +842,11 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 } */
                 else if(transmitter_message[0]==0x0B) {
                     state = state_is_DISC;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             /* case state_awaiting_FLAG:
@@ -861,7 +862,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 break; */
 
             // UA message states (A = 0x01, C = 0x07, BCC = 0x06, F2 = 0x7E)
-            case state_A_UA_OK:
+            /* case state_A_UA_OK:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
                     printf("byte read = 0x%02X\n", transmitter_message[0]);
@@ -897,35 +898,35 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 else {
                     state = state_START;
                 }
-                break;
+                break; */
 
             // information states
             case state_INFO_0:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else if(transmitter_message[0]==0x03) {
                     state = state_READ_INFO;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             case state_INFO_1:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else if(transmitter_message[0]==0x43) {
                     state = state_READ_INFO;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             case state_READ_INFO:
@@ -1145,15 +1146,15 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
             case state_is_DISC:
                 if(transmitter_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else if(transmitter_message[0]==0x08) {
                     state = state_awaiting_FLAG_DISC;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
             case state_awaiting_FLAG_DISC:
@@ -1164,11 +1165,12 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     write(fd, RECEIVER_DISC, 5);
                     printf("sent DISC to Tx\n");
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    return 0; // after sending DISC we can return
                 }
                 else {
                     state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
 
