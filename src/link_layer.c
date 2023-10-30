@@ -178,6 +178,9 @@ void send_message(int signal) {
 	
         // write buf_to_send to fd
         (void) write(fd, buf_to_send, actual_bufSize_);
+
+        float sleepy = 0.001 * actual_bufSize_;
+        sleep(sleepy); // in order to give time for the receiver to go through all of the message
     }
     // else if(message_to_send==type_INFO_0) {
     //     unsigned char BCC2 = 0x00;
