@@ -103,22 +103,27 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 	    int f;
         
         // send the START_CONTROL_PACKET    
-        while(PROCEED_START == FALSE) {
-            printf("sending %i bytes\n", scp_i);
-            printf("data = 0x");
-            for(int j = 0; j < scp_i; j++) {
-            	printf("%02X", START_CONTROL_PACKET[j]);
-            }
-            printf("\n");
-            if((f = llwrite(START_CONTROL_PACKET, scp_i)) > 0 /*== scp_i*/) {
-                PROCEED_START = TRUE;
-            }
-            else {
-                printf("failed to send the %i bytes, sent %i instead\n", scp_i, f);
-                continue;
-            }
+        // while(PROCEED_START == FALSE) {
+        //     printf("sending %i bytes\n", scp_i);
+        //     printf("data = 0x");
+        //     for(int j = 0; j < scp_i; j++) {
+        //     	printf("%02X", START_CONTROL_PACKET[j]);
+        //     }
+        //     printf("\n");
+        //     if((f = llwrite(START_CONTROL_PACKET, scp_i)) > 0 /*== scp_i*/) {
+        //         PROCEED_START = TRUE;
+        //     }
+        //     else {
+        //         printf("failed to send the %i bytes, sent %i instead\n", scp_i, f);
+        //         continue;
+        //     }
+        // }
+	    // printf("sent the SCP\n");
+
+        if(llwrite(START_CONTROL_PACKET, scp_i) < scp_i) {
+            printf("could not send the SCP\n");
+            exit(-1);
         }
-	    printf("sent the SCP\n");
 
         int i = 0;
         int bufSize;
@@ -167,13 +172,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         } // do this until there is no more data to send
 
         // send the END_CONTROL_PACKET
-        while(PROCEED_END == FALSE) {
-            if(llwrite(END_CONTROL_PACKET, scp_i) > 0 /*== scp_i*/) {
-                PROCEED_END = TRUE;
-            }
-            else {
-                continue;
-            }
+        // while(PROCEED_END == FALSE) {
+        //     if(llwrite(END_CONTROL_PACKET, scp_i) > 0 /*== scp_i*/) {
+        //         PROCEED_END = TRUE;
+        //     }
+        //     else {
+        //         continue;
+        //     }
+        // }
+
+        if(llwrite(END_CONTROL_PACKET, scp_i) < scp_i) {
+            printf("failed to send ECP\n");
+            exit(-1);
         }
 
         //when llwrite() returns succesfully for the last time, close the file, call llclose() and finish execution
@@ -189,7 +199,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         //reads from array
         printf("i am a %s\n", role);
         // fopen used to be here
-        int data_size;
+        int data_size = 0;
         int packet_size;
         int file_size_size;
         int loop = TRUE;
@@ -207,7 +217,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 if(read_from_here[0]==1) { // data
                     data_size = (read_from_here[1]<<8);
                     data_size += read_from_here[2];
-                    fwrite(read_from_here+3, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
+                    unsigned char copy_[MAX_PAYLOAD_SIZE];
+                    (void) memcpy(copy_, read_from_here+3, data_size);
+                    fwrite(copy_, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
                     printf("succesfully wrote %i bytes to new file\n", data_size);
                     // i += data_size;
                     size -= data_size;
