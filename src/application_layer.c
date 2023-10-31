@@ -212,6 +212,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         while(loop == TRUE) {
             // call llread()
             packet_size = llread(read_from_here);
+            printf("packet_size = %i\n", packet_size);
             if(packet_size == -1) {
                 continue; // we ignore what already exists in the array and try again
                 printf("ah deu merda aqui no llread\n");
@@ -240,8 +241,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     printf("opened file for writing\n");
                     file_size_size = read_from_here[name_size+4];
                     for(int j = 0; j < file_size_size; j++) {
-                        size = size << 8;
-                        size += read_from_here[data_size+5+j];
+                        size = (size << 8);
+                        size += read_from_here[name_size+5+j];
                     }
                     printf("asjdhaskgdasgd\n");
                 }
@@ -271,6 +272,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     printf("shiiiii\n");
                     continue;
                 }
+
+                sleep(timeout);
             }
         }
 
