@@ -146,7 +146,7 @@ void send_message(int signal) {
         // insert data values (D1...Dn) into buf_to_send
         for(int i = 0, i_helper = 0; i < bufSize_; i++) {
             unsigned char read_byte = (unsigned char) buf_[i];
-            // printf("byte put into message = 0x%02X\n", read_byte);
+            printf("byte put into message = 0x%02X\n", read_byte);
             BCC2 ^= read_byte;
             if(read_byte==0x7E) {
                 buf_to_send[4 + i + i_helper] = 0x7D;
@@ -179,8 +179,8 @@ void send_message(int signal) {
         // write buf_to_send to fd
         (void) write(fd, buf_to_send, actual_bufSize_);
 
-        float sleepy = 0.001 * actual_bufSize_;
-        sleep(sleepy); // in order to give time for the receiver to go through all of the message
+        /* float sleepy = 0.001 * actual_bufSize_;
+        sleep(sleepy); // in order to give time for the receiver to go through all of the message */
     }
     // else if(message_to_send==type_INFO_0) {
     //     unsigned char BCC2 = 0x00;
@@ -501,13 +501,13 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char receiver_message[1] = {0}; // message from Receiver
     unsigned char state = state_START;
 
-    printf("buf = 0x");
+    //printf("buf = 0x");
     for(int n = 0; n < bufSize; n++) {
     	buf_[n] = buf[n]; // copy every u_char from buf to buf_
-    		printf("%02X", buf_[n]);
+    		//printf("%02X", buf_[n]);
   	}
-    printf("\n");
-    printf("bufSize = %i\n", bufSize);
+    //printf("\n");
+    //printf("bufSize = %i\n", bufSize);
     printf("llwrite was called\n");
     
   	bufSize_ = bufSize;
@@ -697,12 +697,12 @@ int llwrite(const unsigned char *buf, int bufSize)
             case state_MUST_RESEND:
                 if(receiver_message[0]==0x7E) {
                     //resend message, reset alarm and alarmCount, etc etc
+                    alarm(0);
                     alarmCount = 0;
                     alarmEnabled = FALSE;
-                    alarm(0);
                     state = state_START;
                     printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                    continue; //immediately sends execution to the next "while" cycle (unsure if this works as intended)
+                    write_STOP=TRUE; //immediately sends execution to the next "while" cycle (unsure if this works as intended)
                 }
                 else {
                     state = state_START;
@@ -740,6 +740,9 @@ int llwrite(const unsigned char *buf, int bufSize)
             case state_FINISH:
                 if(receiver_message[0]==0x7E) {
                     printf("byte read = 0x%02X and will finish \n", receiver_message[0]);
+                    alarm(0);
+                    alarmCount = 0;
+                    alarmEnabled = FALSE;
                     write_STOP = TRUE;
                     if(message_to_send==type_INFO_0) {
                         message_to_send = type_INFO_1;
@@ -758,7 +761,9 @@ int llwrite(const unsigned char *buf, int bufSize)
                 break;
         }
     }
-
+    alarm(0);
+    alarmCount = 0;
+    alarmEnabled = FALSE;
     return -1;
 }
 
@@ -810,7 +815,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 else if(transmitter_message[0]==0x03) {
                     state = state_A_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
+                    //printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 /* else if(DISC_r==TRUE && transmitter_message[0]==0x01) {
                     state = state_A_UA_OK;

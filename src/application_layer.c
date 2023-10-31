@@ -157,16 +157,20 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             	(void) fread(buffer/*_helper*/+3, 1, bufSize-3, file_ptr/*+i*/);
             }
             
-            printf("Tx will send buf = 0x");
+            /* printf("Tx will send buf = 0x");
             for(int m = 0; m < bufSize; m++) {
             	printf("%02X", (unsigned char) buffer[m]);
             }
-            printf("\n");
+            printf("\n"); */
             // calls llwrite() for those bytes
             if(llwrite(buffer, bufSize) >= /*==*/ bufSize) {
                 i += bufSize; // no errors, we can send another group of bytes
                 can_seek = TRUE;
                 printf("successfully sent %i bytes\n", bufSize);
+            }
+            else {
+                printf("could not send the bytes\n");
+                return;
             }
             // if there was an error, we resend the bytes
         } // do this until there is no more data to send
@@ -183,13 +187,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         if(llwrite(END_CONTROL_PACKET, scp_i) < scp_i) {
             printf("failed to send ECP\n");
-            exit(-1);
+            return;
         }
 
         //when llwrite() returns succesfully for the last time, close the file, call llclose() and finish execution
         fclose(file_ptr);
         if(llclose(FALSE) < 0) { // could be TRUE if we want to see the statistics
-            exit(-1);
+            return;
         }    
     }
 
@@ -214,6 +218,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
             else {
                 // succeeded in receiving the data; use state machine to determine what to do with it
+                printf("llread read %i bytes\n", packet_size);
                 if(read_from_here[0]==1) { // data
                     data_size = (read_from_here[1]<<8);
                     data_size += read_from_here[2];
@@ -238,6 +243,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         size = size << 8;
                         size += read_from_here[data_size+5+j];
                     }
+                    printf("asjdhaskgdasgd\n");
                 }
                 else if(read_from_here[0]==3) { // END frame
                     (void) memcpy(END_CONTROL_PACKET, read_from_here, 310);
@@ -262,6 +268,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     }
                 }
                 else { // there must have been an error; we must re-read
+                    printf("shiiiii\n");
                     continue;
                 }
             }
