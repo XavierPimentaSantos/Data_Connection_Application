@@ -146,7 +146,7 @@ void send_message(int signal) {
         // insert data values (D1...Dn) into buf_to_send
         for(int i = 0, i_helper = 0; i < bufSize_; i++) {
             unsigned char read_byte = (unsigned char) buf_[i];
-            printf("byte put into message = 0x%02X\n", read_byte);
+            //printf("byte put into message = 0x%02X\n", read_byte);
             BCC2 ^= read_byte;
             if(read_byte==0x7E) {
                 buf_to_send[4 + i + i_helper] = 0x7D;
@@ -174,6 +174,7 @@ void send_message(int signal) {
             printf("%02X", buf_to_send[k]);
         }
         printf("\n");
+        // printf("BCC2=0x%02X\n", BCC2);
         printf("ABF = %i\n", actual_bufSize_);
 	
         // write buf_to_send to fd
@@ -182,107 +183,6 @@ void send_message(int signal) {
         /* float sleepy = 0.001 * actual_bufSize_;
         sleep(sleepy); // in order to give time for the receiver to go through all of the message */
     }
-    // else if(message_to_send==type_INFO_0) {
-    //     unsigned char BCC2 = 0x00;
-    //     int bufSize_helper = 0;
-    //     buf_to_send[0] = 0x7E;
-    //     buf_to_send[1] = 0x03;
-    //     buf_to_send[2] = 0x00;
-    //     buf_to_send[3] = 0x03; // 0x03^0x00
-    //     printf("added static values\n");
-    //     for(int i = 4; i < bufSize_+4; i++) {
-    //     	unsigned char read_byte = buf_[i-4];
-    //     	printf("read_byte = 0x%02X\n", read_byte);
-    //         BCC2 ^= read_byte;
-    //         if(read_byte==0x7E) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("h");
-    //             i++;
-    //             printf("h");
-    //             buf_to_send[i] = 0x5E;
-    //             printf("h");
-    //             bufSize_helper++;
-    //             printf("h\n");
-    //         }
-    //         else if(read_byte==0x7D) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("j");
-    //             i++;
-    //             printf("j");
-    //             buf_to_send[i] = 0x5D;
-    //             printf("j");
-    //             bufSize_helper++;
-    //         	printf("j\n");
-    //         }
-    //         else {
-    //             buf_to_send[i] = read_byte;
-    //             printf("k\n");
-    //         }
-    //         printf("buf_to_send = 0x");
-	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%02X", buf_to_send[l]);
-	// 		}
-	// 		printf("\n");
-    //     }
-    //     buf_to_send[bufSize_+bufSize_helper+4] = BCC2;
-    //     buf_to_send[bufSize_+bufSize_helper+5] = 0x7E;
-	// 	printf("buf_to_send = 0x");
-	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%02X", buf_to_send[l]);
-	// 	}
-	// 	printf("\n");
-    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
-    // }
-    // else /*if(message_to_send==type_INFO_1)*/ {
-    //     unsigned char BCC2 = 0x00;
-    //     int bufSize_helper = 0;
-    //     buf_to_send[0] = 0x7E;
-    //     buf_to_send[1] = 0x03;
-    //     buf_to_send[2] = 0x40;
-    //     buf_to_send[3] = 0x43; // 0x03^0x40
-    //     printf("added static values\n");
-    //     for(int i = 4; i < bufSize_+4; i++) {
-    //     	unsigned char read_byte = buf_[i-4];
-    //         BCC2 ^= read_byte;
-    //         if(read_byte==0x7E) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("h");
-    //             i++;
-    //             printf("h");
-    //             buf_to_send[i] = 0x5E;
-    //             printf("h");
-    //             bufSize_helper++;
-    //             printf("h\n");
-    //         }
-    //         else if(read_byte==0x7D) {
-    //             buf_to_send[i] = 0x7D;
-    //             printf("j");
-    //             i++;
-    //             printf("j");
-    //             buf_to_send[i] = 0x5D;
-    //             printf("j");
-    //             bufSize_helper++;
-    //         	printf("j\n");
-    //         }
-    //         else {
-    //             buf_to_send[i] = read_byte;
-    //             printf("k\n");
-    //         }
-    //         printf("buf_to_send = 0x");
-	// 		for(int l = 0; l < bufSize_+bufSize_helper; l++) {
-	// 			printf("%02X", buf_to_send[l]);
-	// 		}
-	// 		printf("\n");
-    //     }
-    //     buf_to_send[bufSize_+4] = BCC2;
-    //     buf_to_send[bufSize_+5] = 0x7E;
-	// 	printf("buf_to_send = 0x");
-	// 	for(int l = 0; l < bufSize_+6; l++) {
-	// 		printf("%02X", buf_to_send[l]);
-	// 	}
-	// 	printf("\n");
-    //     write(fd, buf_to_send, bufSize_ + bufSize_helper + 6);
-    // }
 }
 
 ////////////////////////////////////////////////
@@ -294,10 +194,6 @@ int llopen(LinkLayer connectionParameters)
     connectionParameters_ = connectionParameters_;
     timeout_ = connectionParameters.timeout;
     nTries_ = connectionParameters.nRetransmissions;
-
-    int open_STOP = FALSE;
-    unsigned char open_buf[1] = {0};
-    int open_state = 0;
 
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if(fd < 0) {
@@ -337,6 +233,10 @@ int llopen(LinkLayer connectionParameters)
     }
 
     printf("New termios structure set\n");
+
+    int open_STOP = FALSE;
+    unsigned char open_buf[1] = {0};
+    int open_state = 0;
 
     if(connectionParameters.role == LlTx) { // llopen() was called by the Transmitter
         message_to_send = type_SET;
@@ -545,10 +445,6 @@ int llwrite(const unsigned char *buf, int bufSize)
                     state = state_A_OK;
                     printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
                 }
-                /* else if(receiver_message[0]==0x01 && DISC==TRUE) {
-                    state = A_DISC_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                } */
                 else {
                     state = state_START;
                     printf("byte read = 0x%02X\n", receiver_message[0]);
@@ -559,10 +455,6 @@ int llwrite(const unsigned char *buf, int bufSize)
                     state = state_FLAG_1_OK;
                     printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
                 }
-                /* else if(receiver_message[0]==0x07) {
-                    state = C_UA_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                } */
                 else if(receiver_message[0]==0x01 && message_to_send==type_INFO_0) {
                     state = state_C_REJ_0;
                     printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
@@ -584,88 +476,6 @@ int llwrite(const unsigned char *buf, int bufSize)
                     printf("byte read = 0x%02X\n", receiver_message[0]);
                 }
                 break;
-            /* case A_DISC_OK:
-                if(receiver_message[0]==0x7E) {
-                    state = FLAG_1_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else if(receiver_message[0]==0x0B) {
-                    state = C_DISC_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                break;
-            case C_DISC_OK:
-                if(receiver_message[0]==0x7E) {
-                    state = FLAG_1_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else if(receiver_message[0]==(0x01^0x0B)) {
-                    state = BCC_DISC_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                break;
-            case BCC_DISC_OK:
-                if(receiver_message[0]==0x7E) {
-                    // received DISC from Receiver, must send UA and terminate connection
-                    alarmCount = 0;
-                    alarm(0); // disable pending alarms (will be restored in the next execution I think)
-                    nTries_ = 1; // we only want to send UA once (acknowledgement on the receiver's part is not needed)
-                    message_to_send = type_UA;
-                    STOP = TRUE; // on the next cycle we exit the execution
-                    printf("will disconnect\n");
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                break; */
-            /* case C_UA_OK:
-                if(receiver_message[0]==0x7E) {
-                    state = FLAG_1_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else if(receiver_message[0]==(0x03^0x07)) {
-                    state = BCC_UA_OK;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                break;
-            case BCC_UA_OK:
-                if(receiver_message[0]==0x7E) {
-                    if(message_to_send==type_SET) {
-                        message_to_send = type_INFO_0;
-                        printf("sent SET message and was acknowledged\n");
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);, receiver_message[0]);
-                    }
-                    else if(message_to_send==type_INFO_0) {
-                        message_to_send = type_INFO_1;
-                        printf("sent INFO_0 message and was acknowledged\n");
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                    }
-                    else  {
-                        message_to_send = type_INFO_0;
-                        printf("sent INFO_1 message and was acknowledged\n");
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                    }
-                    state = START;
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X and will change state \n", receiver_message[0]);
-                }
-                break; */
             case state_C_REJ_0:
                 if(receiver_message[0]==0x7E) {
                     state = state_FLAG_1_OK;
@@ -791,11 +601,12 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     */
 
     printf("llread was called\n");
-    
+    printf("can_receive_bit = 0x%02X\n", can_receive_bit);
     while(read_STOP == FALSE) {
         int byte = read(fd, transmitter_message, 1);
         if(byte <= 0) continue;
         printf("byte read initially = 0x%02X\n", transmitter_message[0]);
+        
         switch(state) {
             // main states (F1 = 0x7E)
             case state_START:
@@ -817,10 +628,6 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     state = state_A_OK;
                     //printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
-                /* else if(DISC_r==TRUE && transmitter_message[0]==0x01) {
-                    state = state_A_UA_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                } */
                 else {
                     state = state_START;
                     // printf("byte read = 0x%02X\n", transmitter_message[0]);
@@ -842,20 +649,18 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 else if(transmitter_message[0]==(can_receive_bit^0x40)) {
                     if(can_receive_bit==0x00) {
                         // send RR0
-                        (void) write(fd, RR_0, 5);
+                        int q = write(fd, RR_0, 5);
+                        printf("sent RR0 with 0x%02X bytes\n", q);
                         return -1;
                     }
                     else {
                         // send RR1
-                        (void) write(fd, RR_1, 5);
+                        int q = write(fd, RR_1, 5);
+                        printf("sent RR1 with 0x%02X bytes\n", q);
                         return -1;
                     }
                     state = state_START;
                 }
-                /* else if(transmitter_message[0]==0x03) {
-                    state = is_SET;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                } */
                 else if(transmitter_message[0]==0x0B) {
                     state = state_is_DISC;
                     // printf("byte read = 0x%02X\n", transmitter_message[0]);
@@ -865,56 +670,6 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 break;
-            /* case state_awaiting_FLAG:
-                if(transmitter_message[0]==0x7E) {
-                    state = state_START;
-                    write(fd, RECEIVER_UA_MESSAGE, 5);
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                break; */
-
-            // UA message states (A = 0x01, C = 0x07, BCC = 0x06, F2 = 0x7E)
-            /* case state_A_UA_OK:
-                if(transmitter_message[0]==0x7E) {
-                    state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else if(transmitter_message[0]==0x07) {
-                    state = state_C_UA_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
-                    state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                break;
-            case state_C_UA_OK:
-                if(transmitter_message[0]==0x7E) {
-                    state = state_FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else if(transmitter_message[0]==0x06) {
-                    state = state_BCC_UA_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
-                    state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                break;
-            case state_BCC_UA_OK:
-                if(transmitter_message[0]==0x7E) {
-                    // we can close
-                    return 0;
-                }
-                else {
-                    state = state_START;
-                }
-                break; */
 
             // information states
             case state_INFO_0:
@@ -924,6 +679,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 else if(transmitter_message[0]==0x03) {
                     state = state_READ_INFO;
+                    printf("i will read info\n");
                     // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
@@ -938,6 +694,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 else if(transmitter_message[0]==0x43) {
                     state = state_READ_INFO;
+                    printf("i will read info\n");
                     // printf("byte read = 0x%02X\n", transmitter_message[0]);
                 }
                 else {
@@ -946,34 +703,31 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 break;
             case state_READ_INFO:
+                printf("current BCC2_calc=0x%02X\n", BCC2_calc);
                 if(transmitter_message[0]==0x7E) {
-                    /* state = state_START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    index = 0;
-                    if(can_receive_bit==0x00) {
-                        write(fd, REJECT_0, 5);
-                        printf("there was an error in the message; requesting retransmission\n");
-                    }
-                    else {
-                        write(fd, REJECT_1, 5);
-                        printf("there was an error in the message; requesting retransmission\n");
-                    } */
+                    printf("yall already know\n");
                     if(last_read == BCC2_calc) {
                         if(can_receive_bit==0x00) {
-                            write(fd, RR_1, 5);
+                            int q = write(fd, RR_1, 5);
+                            printf("accepting 0 and sending RR1 with %i bytes\n", q);
+                            can_receive_bit = 0x40;
                         }
                         else {
-                            write(fd, RR_0, 5);
+                            int q = write(fd, RR_0, 5);
+                            printf("accepting 1 and sending RR0 with %i bytes\n", q);
+                            can_receive_bit = 0x00;
                         }
-                        return ret;
+                        return ret-1;
                     }
                     else {
                         if(can_receive_bit==0x00) {
-                            write(fd, REJECT_0, 5);
+                            int q = write(fd, REJECT_0, 5);
+                            printf("rejected 0, sent %i bytes\n", q);
                             return -1;
                         }
                         else {
-                            write(fd, REJECT_1, 5);
+                            int q = write(fd, REJECT_1, 5);
+                            printf("rejected 1, sent %i bytes\n", q);
                             return -1;
                         }
                     }
@@ -987,64 +741,30 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     ret++;
                     BCC2_calc ^= last_read;
                     last_read = transmitter_message[0];
-                }
-                /* else if(transmitter_message[0]==BCC2_calc) {
-                    state = state_STANDBY;
-                    standby_byte = transmitter_message[0];
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else if(transmitter_message[0]==0x7D) {
-                    state = state_GOT_7D;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
                     state = state_READ_INFO;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    packet[index] = transmitter_message[0];
-                    index++;
-                    BCC2_calc = BCC2_calc ^ transmitter_message[0];
-                } */
+                }
                 break;
             case state_GOT_7D:
+                printf("that's on God\n");
                 if(transmitter_message[0]==0x5D) {
-                    /* if(BCC2_calc == 0x7D) {
-                        state = state_STANDBY; // BCC2 could be 0x7D, in which case we need to check for  0x7d 0x5d 0x7e
-                        standby_byte = 0x5D;
-                        printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    }
-                    else {
-                        state = state_READ_INFO;
-                        packet[index] = 0x7D;
-                        index++;
-                        BCC2_calc = BCC2_calc ^ 0x7D;
-                        printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    } */
+                    printf("this\n");
                     packet[index] = 0x7D;
                     index++;
                     ret++;
                     BCC2_calc ^= last_read;
                     last_read = 0x7D;
                     state = state_READ_INFO;
+                    printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
                 }
                 else if(transmitter_message[0]==0x5E) {
-                    /* if(BCC2_calc == 0x7E) {
-                        state = state_STANDBY; // BCC2 could be 0x7E, in which case we need to check for 0x7d 0x5e 0x7e
-                        standby_byte = 0x5E;
-                        printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    }
-                    else {
-                        state = state_READ_INFO;
-                        packet[index] = 0x7E;
-                        index++;
-                        BCC2_calc = BCC2_calc ^ 0x7E;
-                        printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    } */
+                    printf("that\n");
                     packet[index] = 0x7E;
                     index++;
                     ret++;
                     BCC2_calc ^= last_read;
                     last_read = 0x7E;
                     state = state_READ_INFO;
+                    printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
                 }
                 else {
                     state = state_START;
@@ -1052,117 +772,17 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     ret = 0;
                     printf("byte read = 0x%02X\n", transmitter_message[0]);
                     if(can_receive_bit==0x00) {
-                        write(fd, REJECT_0, 5);
-                        printf("there was an error in the message; requesting retransmission\n");
+                        int q = write(fd, REJECT_0, 5);
+                        printf("there was an error in the message; requesting retransmission; sent 0x%02X bytes\n", q);
                     }
                     else {
-                        write(fd, REJECT_1, 5);
-                        printf("there was an error in the message; requesting retransmission\n");
+                        int q = write(fd, REJECT_1, 5);
+                        printf("there was an error in the message; requesting retransmission; sent 0x%02X bytes\n", q);
                     }
                     // need to reject message and wait for new one
+                    return -1;
                 }
-            /* case state_STANDBY:
-                if(standby_byte==0x5D) {
-                    if(transmitter_message[0]==0x7E) {
-                        can_receive_bit = can_receive_bit ^ 0x40;
-                        // BCC2 was 0x7D, and there was nothing wrong with the message; we can send RR
-                        if(can_receive_bit==0x40) {
-                            write(fd, RR_0, 5);
-                        }
-                        else {
-                            write(fd, RR_1, 5);
-                        }
-                        printf("got data\n");
-                        state = state_START;
-                        printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    }
-                    else { // didn't receive F, which means 0x7D was NOT the BCC2 byte, and therefore we have to send 0x7D to the packet
-                        packet[index] = 0x7D;
-                        index++;
-                        if(transmitter_message[0]==0x7D) {
-                            state = got_7d;
-                            BCC2_calc = 0x00;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                        }
-                        else {
-                            packet[index] = transmitter_message[0];
-                            BCC2_calc = transmitter_message[0];
-                            index++;
-                            state = READ_INFO;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                        }
-                    }
-                }
-                else if(standby_byte==0x5E) {
-                    if(transmitter_message[0]==0x7E) {
-                        can_receive_bit = can_receive_bit ^ 0x40;
-                        // BCC2 was 0x7E, and there was nothing wrong with the message; we can send RR and return
-                        if(can_receive_bit==0x40) {
-                            write(fd, RR_0, 5);
-                        }
-                        else {
-                            write(fd, RR_1, 5);
-                        }
-                        printf("read data\n");
-                        state = START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    }
-                    else { // didn't receive F, which means 0x7E was NOT the BCC2 byte, and therefore we have to send 0x7E to the packet
-                        packet[index] = 0x7E;
-                        index++;
-                        if(transmitter_message[0]==0x7D) {
-                            state = got_7d;
-                            BCC2_calc = 0x00;
-                        }
-                        else {
-                            packet[index] = transmitter_message[0];
-                            BCC2_calc = transmitter_message[0];
-                            index++;
-                            state = READ_INFO;
-                        }
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                    }
-                }
-                else if(transmitter_message[0]==0x7E) {
-                    can_receive_bit = can_receive_bit ^ 0x40;
-                    // BCC2 checks off as true, we received the flag, can send RR message and return
-                    if(can_receive_bit==0x40) {
-                        write(fd, RR_0, 5);
-                        printf("received INFO_0\n");
-                    }
-                    else {
-                        write(fd, RR_1, 5);
-                        printf("received INFO_1\n");
-                    }
-                    state = START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else if(transmitter_message[0]==0x00) { // BCC2 may be 0x00, so we must check for that
-                    state = STANDBY;
-                    BCC2_calc = 0x00;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
-                    state = READ_INFO;
-                    packet[index] = standby_byte;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                break; */
-
-            /* case is_SET:
-                if(transmitter_message[0]==0x7E) {
-                    state = FLAG_1_OK;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else if(transmitter_message[0]==0x00) {
-                    state = awaiting_FLAG;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                else {
-                    state = START;
-                    printf("byte read = 0x%02X\n", transmitter_message[0]);
-                }
-                break; */
+                break;
             
             // DISC states
             case state_is_DISC:
@@ -1201,6 +821,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
         }
     }
 
+    printf("na verdade chegou aqui\n");
     return 0;
 }
 

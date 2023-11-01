@@ -214,8 +214,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             packet_size = llread(read_from_here);
             printf("packet_size = %i\n", packet_size);
             if(packet_size == -1) {
-                continue; // we ignore what already exists in the array and try again
                 printf("ah deu merda aqui no llread\n");
+                continue; // we ignore what already exists in the array and try again
             }
             else {
                 // succeeded in receiving the data; use state machine to determine what to do with it
