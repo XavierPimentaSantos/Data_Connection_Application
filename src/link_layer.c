@@ -601,11 +601,11 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     */
 
     printf("llread was called\n");
-    printf("can_receive_bit = 0x%02X\n", can_receive_bit);
+    // printf("can_receive_bit = 0x%02X\n", can_receive_bit);
     while(read_STOP == FALSE) {
         int byte = read(fd, transmitter_message, 1);
         if(byte <= 0) continue;
-        printf("byte read initially = 0x%02X\n", transmitter_message[0]);
+        // printf("byte read initially = 0x%02X\n", transmitter_message[0]);
         
         switch(state) {
             // main states (F1 = 0x7E)
@@ -703,7 +703,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 break;
             case state_READ_INFO:
-                printf("current BCC2_calc=0x%02X\n", BCC2_calc);
+                // printf("current BCC2_calc=0x%02X\n", BCC2_calc);
                 if(transmitter_message[0]==0x7E) {
                     printf("yall already know\n");
                     if(last_read == BCC2_calc) {
@@ -745,26 +745,26 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 }
                 break;
             case state_GOT_7D:
-                printf("that's on God\n");
+                // printf("that's on God\n");
                 if(transmitter_message[0]==0x5D) {
-                    printf("this\n");
+                    // printf("this\n");
                     packet[index] = 0x7D;
                     index++;
                     ret++;
                     BCC2_calc ^= last_read;
                     last_read = 0x7D;
                     state = state_READ_INFO;
-                    printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
+                    // printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
                 }
                 else if(transmitter_message[0]==0x5E) {
-                    printf("that\n");
+                    // printf("that\n");
                     packet[index] = 0x7E;
                     index++;
                     ret++;
                     BCC2_calc ^= last_read;
                     last_read = 0x7E;
                     state = state_READ_INFO;
-                    printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
+                    // printf("state = %i (READ_INFO = 9, GOT_7D = 13)\n", state);
                 }
                 else {
                     state = state_START;
@@ -821,7 +821,7 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
         }
     }
 
-    printf("na verdade chegou aqui\n");
+    // printf("na verdade chegou aqui\n");
     return 0;
 }
 

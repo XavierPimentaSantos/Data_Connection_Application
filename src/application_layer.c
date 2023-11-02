@@ -27,20 +27,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     else return;
 
     printf("started application layer for %s\n", role);
-
-    // to be used by the Receiver side
-    unsigned char new_filename[50] = {0}; // adicionar tamanho aqui
-    unsigned char read_from_here[MAX_PAYLOAD_SIZE] = {0}; // e aqui
-
-    // to be used by Transmitter side
-    unsigned char buffer[MAX_PAYLOAD_SIZE] = {0}; // e aqui
-    // unsigned char *buffer_helper[MAX_PAYLOAD_SIZE] = {0}; // e aqui
     
-    unsigned int size = 0;
+    // unsigned char *buffer_helper[MAX_PAYLOAD_SIZE] = {0};
     
+    unsigned long int size = 0;
     FILE *file_ptr;
-    char ch;
-    
     unsigned char START_CONTROL_PACKET[310] = {0};
     unsigned char END_CONTROL_PACKET[310] = {0};
 
@@ -51,6 +42,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     // IF TRANSMITTER
     if(connection.role == LlTx) {
+        unsigned char buffer[MAX_PAYLOAD_SIZE+3] = {0};
         file_ptr = fopen(filename, "r"); // load the file into file_ptr
 	    printf("opened %s\n", filename);
 	    
@@ -59,6 +51,30 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             size = st.st_size;
         }
 	    printf("read file ig, size is %i\n", size);
+
+        unsigned char ex = 0xFF;
+
+        // char *ex_filename;
+        // ex_filename = "pissguin.gif";
+
+        // FILE *ppp = fopen(ex_filename, "a");
+        // unsigned char interim[size+1];
+        // int aslhd = fread(interim, sizeof ex, size, file_ptr);
+        // if(aslhd<size) {
+        //     printf("alsdjjjj\n");
+        // }
+        // printf("%i", sizeof interim);
+        // interim[size] = EOF;
+      	// int mmm = 0;
+      	// while(interim[mmm]!=EOF) {
+      	// 	fputc(interim[mmm], ppp);
+        //     mmm++;
+      	// }
+
+        // int akshda = fwrite(file_ptr, sizeof ex, size, ppp);
+        // if(akshda < size) {
+            // printf("alshdlnasdh\n");
+        // }
 
         // create the static Control packets
         unsigned char size_size = 0;
@@ -101,24 +117,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         unsigned char PROCEED_START = FALSE;
         unsigned char PROCEED_END = FALSE;
 	    int f;
-        
-        // send the START_CONTROL_PACKET    
-        // while(PROCEED_START == FALSE) {
-        //     printf("sending %i bytes\n", scp_i);
-        //     printf("data = 0x");
-        //     for(int j = 0; j < scp_i; j++) {
-        //     	printf("%02X", START_CONTROL_PACKET[j]);
-        //     }
-        //     printf("\n");
-        //     if((f = llwrite(START_CONTROL_PACKET, scp_i)) > 0 /*== scp_i*/) {
-        //         PROCEED_START = TRUE;
-        //     }
-        //     else {
-        //         printf("failed to send the %i bytes, sent %i instead\n", scp_i, f);
-        //         continue;
-        //     }
-        // }
-	    // printf("sent the SCP\n");
 
         if(llwrite(START_CONTROL_PACKET, scp_i) < scp_i) {
             printf("could not send the SCP\n");
@@ -148,22 +146,25 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             //     buffer[j+3] = file_ptr[i + j];
             // }
             if(can_seek==TRUE) {
-                fseek(file_ptr, i, SEEK_SET);
-            	(void) fread(buffer/*_helper*/+3, 1, bufSize-3, file_ptr/*+i*/);    
+                int fseek_ret  = fseek(file_ptr, i, SEEK_SET);
+                if(fseek_ret!=0) {
+                    printf("fseek failed\n");
+                }
+            	(void) fread(buffer/*_helper*/+3, 1, bufSize, file_ptr/*+i*/);    
                 can_seek = FALSE;
             }
             //printf("file_ptr = %i\n", file_ptr);
             else {
-            	(void) fread(buffer/*_helper*/+3, 1, bufSize-3, file_ptr/*+i*/);
+            	(void) fread(buffer/*_helper*/+3, 1, bufSize, file_ptr/*+i*/);
             }
             
-            /* printf("Tx will send buf = 0x");
+            printf("Tx will send buf = 0x");
             for(int m = 0; m < bufSize; m++) {
             	printf("%02X", (unsigned char) buffer[m]);
             }
-            printf("\n"); */
+            printf("\n");
             // calls llwrite() for those bytes
-            if(llwrite(buffer, bufSize) >= /*==*/ bufSize) {
+            if(llwrite(buffer, bufSize+3) >= /*==*/ bufSize+3) {
                 i += bufSize; // no errors, we can send another group of bytes
                 can_seek = TRUE;
                 printf("successfully sent %i bytes\n", bufSize);
@@ -199,23 +200,38 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     //IF RECEIVER
     else {
-        
-        //reads from array
-        printf("i am a %s\n", role);
-        // fopen used to be here
+        unsigned char new_filename[50] = {0};
+        unsigned char read_from_here[MAX_PAYLOAD_SIZE] = {0};
         int data_size = 0;
         int packet_size;
         int file_size_size;
         int loop = TRUE;
         // int i = 0;
 
+        printf("i am a %s\n", role);
+
         while(loop == TRUE) {
             // call llread()
+            memset(read_from_here, 0, MAX_PAYLOAD_SIZE);
             packet_size = llread(read_from_here);
             printf("packet_size = %i\n", packet_size);
+            printf("received 0x");
+            for(int l = 0; l < packet_size; l++) {
+                printf("%02X", read_from_here[l]);
+            }
+            printf("\n");
             if(packet_size == -1) {
-                printf("ah deu merda aqui no llread\n");
                 continue; // we ignore what already exists in the array and try again
+            }
+            else if(packet_size == 0) {
+                if(size == 0 && llclose(FALSE) > 0) { // right amount of data
+                    printf("finishing execution\n");
+                    return;
+                }
+                else {
+                    printf("something went wrong, size = %d\n", size);
+                    exit(-1);
+                }
             }
             else {
                 // succeeded in receiving the data; use state machine to determine what to do with it
@@ -224,30 +240,33 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     data_size = (read_from_here[1]<<8);
                     data_size += read_from_here[2];
                     unsigned char copy_[MAX_PAYLOAD_SIZE];
-                    (void) memcpy(copy_, read_from_here+3, data_size);
-                    fwrite(copy_, sizeof read_from_here[0], data_size, file_ptr/*+i*/);
-                    printf("succesfully wrote %i bytes to new file\n", data_size);
+                    (void) memcpy(copy_, read_from_here+3, packet_size-3);
+                    fwrite(copy_, sizeof read_from_here[0], packet_size-3, file_ptr/*+i*/);
+                    // for(int l = 3; l < packet_size; l++) {
+                    //     fwrite(read_from_here[l], sizeof read_from_here[0], 1, file_ptr);
+                    // }
+                    printf("succesfully wrote %i bytes to new file\n", packet_size-3);
                     // i += data_size;
-                    size -= data_size;
+                    size -= (packet_size-3);
                 }
                 else if(read_from_here[0]==2) { // START frame
-                    (void) memcpy(START_CONTROL_PACKET, read_from_here, 310);
+                    (void) memcpy(START_CONTROL_PACKET, read_from_here, packet_size);
                     // START_CONTROL_PACKET = read_from_here;
-                    int name_size = read_from_here[2];
-                    for(int j = 0; j < name_size; j++) {
+                    file_size_size = read_from_here[2];
+                    /* for(int j = 0; j < name_size; j++) {
                         new_filename[j] = read_from_here[3+j];
-                    }
+                    } */
                     file_ptr = fopen(filename, "a+"); // we want to append to file, if it already exists, or create new if it does not exist
                     printf("opened file for writing\n");
-                    file_size_size = read_from_here[name_size+4];
                     for(int j = 0; j < file_size_size; j++) {
+                        printf("current size = %i\n", size);
                         size = (size << 8);
-                        size += read_from_here[name_size+5+j];
+                        size += read_from_here[3+j];
                     }
-                    printf("asjdhaskgdasgd\n");
+                    printf("size was determined to be %i\n", size);
                 }
                 else if(read_from_here[0]==3) { // END frame
-                    (void) memcpy(END_CONTROL_PACKET, read_from_here, 310);
+                    (void) memcpy(END_CONTROL_PACKET, read_from_here, packet_size);
                     // END_CONTROL_PACKET = read_from_here;
                     // END_CONTROL_PACKET[0] = 2;
                     unsigned char something_wrong = FALSE;
@@ -265,6 +284,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         continue;
                     }
                     else { // there was no error; we can finish execution
+                        printf("closing file\n");
                         loop = FALSE;
                     }
                 }
@@ -272,16 +292,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     printf("shiiiii\n");
                     continue;
                 }
-
-                sleep(timeout);
             }
         }
 
-        // we good, received everything correctly; we can close the file and the connection
+        /* // we good, received everything correctly; we can close the file and the connection
         fclose(file_ptr);
         if(llclose(FALSE) < 0) {
             exit(-1);
-        }
+        } */
     }
 
     return;
