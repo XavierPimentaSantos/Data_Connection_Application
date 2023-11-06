@@ -120,7 +120,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
 
         fclose(file_ptr);
-        if(llclose(FALSE) < 0) { // could be TRUE if we want to see the statistics
+        if(llclose(TRUE) < 0) { // could be TRUE if we want to see the statistics
             return;
         }    
     }
@@ -140,7 +140,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 continue;
             }
             else if(packet_size == 0) {
-                if(size == 0 && llclose(FALSE) > 0) {
+                if(size == 0 && llclose(TRUE) > 0) {
                     return;
                 }
                 else {

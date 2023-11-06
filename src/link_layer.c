@@ -80,9 +80,15 @@ int message_to_send = type_SET; // defines the type of message to be sent by Tra
 
 unsigned char buf_to_send[3000] = {0}; // 3 * MAX_PAYLOAD_SIZE, more than enough space
 
+// statistics
+int packets_sent = 0;
+int bit_rate;
+int packets_received = 0;
+
 void send_message(int signal) {
     alarmEnabled = FALSE;
     alarmCount++;
+    packets_sent++;
 
     if(message_to_send==type_SET) {
         (void) write(fd, SET_MESSAGE, 5);
@@ -133,9 +139,11 @@ void send_message(int signal) {
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters)
 {
-    connectionParameters_ = connectionParameters_;
+    connectionParameters_ = connectionParameters;
     timeout_ = connectionParameters.timeout;
     nTries_ = connectionParameters.nRetransmissions;
+    
+    bit_rate = connectionParameters.baudRate;
 
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if(fd < 0) {
@@ -310,6 +318,7 @@ int llopen(LinkLayer connectionParameters)
                 case 4: // RECEIVED BCC
                     if(open_buf[0]==0x7E) {
                         write(fd, RECEIVER_UA_MESSAGE, 5);
+                        packets_received++;
                         return 1;
                     }
                     else {
@@ -525,10 +534,12 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                 else if(transmitter_message[0]==(can_receive_bit^0x40)) {
                     if(can_receive_bit==0x00) {
                         (void) write(fd, RR_0, 5);
+                        packets_received++;
                         return -1;
                     }
                     else {
                         (void) write(fd, RR_1, 5);
+                        packets_received++;
                         return -1;
                     }
                     state = state_START;
@@ -573,15 +584,18 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                             (void) write(fd, RR_0, 5);
                             can_receive_bit = 0x00;
                         }
+                        packets_received++;
                         return index-1;
                     }
                     else {
                         if(can_receive_bit==0x00) {
                             (void) write(fd, REJECT_0, 5);
+                            packets_received++;
                             return -1;
                         }
                         else {
                             (void) write(fd, REJECT_1, 5);
+                            packets_received++;
                             return -1;
                         }
                     }
@@ -618,9 +632,11 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
                     index = 0;
                     if(can_receive_bit==0x00) {
                         (void) write(fd, REJECT_0, 5);
+                        packets_received++;
                     }
                     else {
                         (void) write(fd, REJECT_1, 5);
+                        packets_received++;
                     }
                     return -1;
                 }
@@ -669,6 +685,17 @@ int llclose(int showStatistics)
     {
         perror("tcsetattr");
         exit(-1);
+    }
+
+    if(showStatistics==TRUE) {
+        if(connectionParameters_.role==LlTx) {
+            printf("BitRate = %d\n", bit_rate);
+            printf("Number of packets sent = %d\n", packets_sent);
+        }
+        else {
+            printf("BitRate = %d\n", bit_rate);
+            printf("Number of packets received = %d\n", packets_received);
+        }
     }
 
     close(fd);
