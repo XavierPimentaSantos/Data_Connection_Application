@@ -184,7 +184,6 @@ int llopen(LinkLayer connectionParameters)
 
     printf("New termios structure set\n");
 
-    // int open_STOP = FALSE;
     unsigned char open_buf[1] = {0};
     int open_state = 0;
 
@@ -194,7 +193,7 @@ int llopen(LinkLayer connectionParameters)
         nTries_ = connectionParameters.nRetransmissions;
         (void) signal(SIGALRM, send_message);
 
-        while(alarmCount < nTries_ /* && open_STOP == FALSE */) {
+        while(alarmCount < nTries_) {
             if(alarmEnabled == FALSE) {
                 alarm(timeout_);
                 alarmEnabled = TRUE;
@@ -494,11 +493,9 @@ int llread(unsigned char *packet) // -1: error; 0: no more data; n > 0: number o
     unsigned char transmitter_message[1] = {0};
     int index = 0;
     unsigned char last_read = 0x00;
-
     while(TRUE) {
         int byte = read(fd, transmitter_message, 1);
         if(byte <= 0) continue;
-
         switch(state) {
             case state_START:
                 if(transmitter_message[0]==0x7E) {
