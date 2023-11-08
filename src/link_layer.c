@@ -11,6 +11,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
@@ -85,6 +86,10 @@ int packets_sent = 0;
 int bit_rate;
 int packets_received = 0;
 
+clock_t time_elapsed;
+clock_t total_time_elapsed = 0;
+long int bits_sent = 0;
+
 void send_message(int signal) {
     alarmEnabled = FALSE;
     alarmCount++;
@@ -92,6 +97,7 @@ void send_message(int signal) {
 
     if(message_to_send==type_SET) {
         (void) write(fd, SET_MESSAGE, 5);
+        bits_sent+=40;
     }
     else {
         unsigned char BCC2 = 0x00;
@@ -131,6 +137,7 @@ void send_message(int signal) {
         buf_to_send[actual_bufSize_++] = 0x7E;
 	
         (void) write(fd, buf_to_send, actual_bufSize_);
+        bits_sent+=(actual_bufSize_*8);
     }
 }
 
@@ -339,6 +346,8 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
+    time_elapsed = clock();
+
     unsigned char receiver_message[1] = {0};
     unsigned char state = state_START;
 
@@ -465,6 +474,8 @@ int llwrite(const unsigned char *buf, int bufSize)
                     else {
                         message_to_send = type_INFO_0;
                     }
+                    time_elapsed = clock() - time_elapsed;
+                    total_time_elapsed += time_elapsed;
                     return bufSize_;
                 }
                 else {
@@ -675,6 +686,8 @@ int llclose(int showStatistics)
 {
     if(connectionParameters_.role == LlTx) {
         (void) write(fd, TRANSMITTER_DISC, 5);
+        bits_sent+=40;
+        bit_rate = bits_sent / (total_time_elapsed/CLOCKS_PER_SEC);
     }
 
     // Restore the old port settings
@@ -686,11 +699,10 @@ int llclose(int showStatistics)
 
     if(showStatistics==TRUE) {
         if(connectionParameters_.role==LlTx) {
-            printf("BitRate = %d\n", bit_rate);
+            printf("BitRate = %d bit/s\n", bit_rate);
             printf("Number of packets sent = %d\n", packets_sent);
         }
         else {
-            printf("BitRate = %d\n", bit_rate);
             printf("Number of packets received = %d\n", packets_received);
         }
     }
