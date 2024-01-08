@@ -1,7 +1,7 @@
 # Data Connection Application
 
 ### Motivation
-This application was developed in the context of the [RCOM (Computer Networks)](https://sigarra.up.pt/feup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=333125) course unit, during the 3<sup>rd</sup> year of the Bachelor's Degree in Software Engineering @ FEUP, in collaboration with [Artur Telo](https://github.com/ArturTelo). We obtained a score of 11.2/20 for this project.
+This application was developed in the context of the [RCOM (Computer Networks)](https://sigarra.up.pt/feup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=333125) course unit, during the 3<sup>rd</sup> year of the Bachelor's Degree in Software Engineering @ FEUP, in collaboration with [Artur Telo](https://github.com/ArturTelo).
 
 ### The application
 The application allows for the transmission of files of any size and format from one computer to another, provided they are connected through the serial ports.
